@@ -17,7 +17,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import hangul_font_kit
 
-API_VERSION = "0.5.0"
+API_VERSION = "0.6.0"
 STARTED_AT = datetime.now(timezone.utc)
 
 app = FastAPI(title="Glyphroom API", version=API_VERSION, docs_url="/api/v1/docs", openapi_url="/api/v1/openapi.json")
@@ -111,3 +111,7 @@ app.include_router(charsets_router)
 from .glyphs import router as glyphs_router  # noqa: E402
 
 app.include_router(glyphs_router)
+
+from .builds import router as builds_router  # noqa: E402
+
+app.include_router(builds_router)

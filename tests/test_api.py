@@ -95,3 +95,41 @@ def test_template_is_valid_empty_glyph():
         f.write(r.text)
     g = svgread.read_svg(f.name); os.unlink(f.name)
     assert g["subpaths"] == [] and g["unsupported"] == []  # 안내선은 글자로 읽히지 않음
+
+
+def _wait(bid, until=("succeeded", "failed", "cancelled"), limit=60):
+    import time
+    for _ in range(limit * 10):
+        b = c.get(f"/api/v1/builds/{bid}").json()
+        if b["status"] in until:
+            return b
+        time.sleep(0.1)
+    raise AssertionError("빌드가 끝나지 않음")
+
+
+def _gid(kind):
+    return _upload(c.get(f"/api/v1/samples/{kind}.zip").content).json()["glyphSetId"]
+
+
+def test_build_good_sample_with_allow_missing():
+    g = _gid("good")
+    r = c.post("/api/v1/builds", json={"glyphSetId": g, "allowMissing": True, "familyName": "나의 글꼴"})
+    assert r.status_code == 200 and r.json()["status"] == "queued"
+    b = _wait(r.json()["buildId"])
+    assert b["status"] == "succeeded" and b["progress"] == 100 and b["glyphCount"] == 20
+    names = [a["name"] for a in b["artifacts"]]
+    assert names[0].endswith(".ttf") and {"glyph_sheet.png", "specimen.pdf", "license_draft.md", "product_draft.md"} <= set(names)
+    assert all(s["state"] == "done" for s in b["steps"]) and "_dir" not in b  # 서버 경로 숨김
+
+
+def test_build_stops_on_missing_and_problems():  # TC-06
+    b = _wait(c.post("/api/v1/builds", json={"glyphSetId": _gid("good")}).json()["buildId"])
+    assert b["status"] == "failed" and b["error"]["code"] == "GLYPH_VALIDATION_FAILED" and "누락" in b["error"]["message"]
+    b = _wait(c.post("/api/v1/builds", json={"glyphSetId": _gid("mixed"), "allowMissing": True}).json()["buildId"])
+    assert b["status"] == "failed" and "고칠 곳" in b["error"]["message"]
+
+
+def test_build_not_found_and_validation():
+    assert c.post("/api/v1/builds", json={"glyphSetId": "gs_0000000000000000"}).status_code == 404
+    assert c.post("/api/v1/builds", json={"glyphSetId": _gid("good"), "familyName": "  "}).status_code == 400
+    assert c.get("/api/v1/builds/bld_nope").status_code == 404

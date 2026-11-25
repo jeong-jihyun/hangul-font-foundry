@@ -1,4 +1,6 @@
 """SVG 글리프 → TTF. (OTF/CFF 는 만들지 않음)"""
+import re
+
 from fontTools.fontBuilder import FontBuilder
 from fontTools.pens.cu2quPen import Cu2QuPen
 from fontTools.pens.ttGlyphPen import TTGlyphPen
@@ -50,10 +52,16 @@ def build_ttf(found, cfg, out_path):
     fb.setupHorizontalMetrics(metrics)
     fb.setupHorizontalHeader(ascent=cfg["ascent"], descent=cfg["descent"])
     fam, sty = cfg["family_name"], cfg["style_name"]
-    fb.setupNameTable({"familyName": fam, "styleName": sty, "uniqueFontIdentifier": f"{fam}-{sty}-{cfg['version']}",
-                       "fullName": f"{fam} {sty}", "psName": f"{fam}-{sty}", "version": f"Version {cfg['version']}"})
+    ps = ps_name(fam)  # PostScript 이름은 영문·숫자만 허용 (한글 글꼴 이름도 빌드되게)
+    fb.setupNameTable({"familyName": fam, "styleName": sty, "uniqueFontIdentifier": f"{ps}-{sty}-{cfg['version']}",
+                       "fullName": f"{fam} {sty}", "psName": f"{ps}-{sty}", "version": f"Version {cfg['version']}"})
     fb.setupOS2(sTypoAscender=cfg["ascent"], sTypoDescender=cfg["descent"], usWinAscent=cfg["ascent"],
                 usWinDescent=abs(cfg["descent"]))
     fb.setupPost()
     fb.save(out_path)
     return len(found)
+
+
+def ps_name(family):
+    """PostScript·파일 이름용: 영문·숫자·하이픈만 남긴다. 다 지워지면 HangulFont."""
+    return re.sub(r"[^A-Za-z0-9-]", "", family)[:28] or "HangulFont"
