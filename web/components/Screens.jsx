@@ -63,56 +63,6 @@ export function HomeScreen({ go }) {
   );
 }
 
-const SAMPLE_ISSUES = [
-  { severity: "error", file: "U+AC07.svg", message: "필수 글자 파일이 없습니다 (갇)", suggestion: "glyphs 폴더에 U+AC07.svg 를 추가하세요" },
-  { severity: "error", file: "ga.svg", message: "파일명 규칙에 맞지 않습니다", suggestion: "U+AC00.svg 처럼 코드 포인트 이름으로 바꾸세요" },
-  { severity: "warning", file: "U+AC10.svg", message: "경로가 캔버스(1000×1000) 밖으로 나갔습니다", suggestion: "좌표를 0~1000 안으로 옮기세요" },
-];
-
-export function CheckScreen({ toast }) {
-  const [path, setPath] = useState("./glyphs");
-  const [error, setError] = useState("");
-  const [done, setDone] = useState(null);
-  const run = () => {
-    const p = path.trim();
-    if (!p) { setError("글리프 폴더 경로를 입력해 주세요."); return; }
-    setError("");
-    setDone(p);
-    toast("데모 검수 결과를 표시했습니다.");
-  };
-  return (
-    <section className="screen active" id="check">
-      <PageHead eyebrow="QUALITY CONTROL" title="SVG 규격 검수" desc="폰트 빌드 전에 글리프 파일의 구조와 규격을 확인합니다." badge="CLI · check" />
-      <Card title="검수 대상" aside={<span className="badge">INPUT</span>}>
-        <Field id="glyphPath" label="글리프 폴더 경로" help="예: ./glyphs (5단계에서 zip 올리기로 바뀝니다)" error={error}>
-          <input id="glyphPath" value={path} onChange={(e) => setPath(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
-        </Field>
-        <div className="checks">
-          <label className="checkrow"><input type="checkbox" checked disabled readOnly /> 필수 글자 누락 및 U+XXXX.svg 파일명 규칙</label>
-          <label className="checkrow"><input type="checkbox" checked disabled readOnly /> viewBox 0 0 1000 1000 및 기준선 규격</label>
-          <label className="checkrow"><input type="checkbox" checked disabled readOnly /> 열린 경로 및 미지원 SVG 명령</label>
-        </div>
-        <Notice>지원 요소: &lt;path&gt; 절대좌표 M L H V C Q Z 및 &lt;rect&gt;. transform, 상대좌표, arc(A)는 지원하지 않습니다.</Notice>
-        <Button onClick={run}>검수 실행&nbsp; ↗</Button>
-        <Result show={!!done} tone="warning">
-          <strong>데모 검수 결과 — 실제 파일 검사는 수행하지 않았습니다.</strong>
-          검사 대상: {done} · 샘플 오류 2건 · 주의 1건
-        </Result>
-      </Card>
-      {done && (
-        <Card title="문제 목록 (샘플)" aside={<StatusChip status="error">오류 2</StatusChip>}>
-          {SAMPLE_ISSUES.map((i) => <IssueRow key={i.file} {...i} />)}
-        </Card>
-      )}
-      <Card title="검수 항목 안내" aside="CHECKLIST">
-        <div className="activity"><div className="activity-icon">!</div><div><b>파일 누락</b><small>문자 세트 대비 SVG 파일이 없는지 확인</small></div></div>
-        <div className="activity"><div className="activity-icon">⌗</div><div><b>캔버스 규격</b><small>1000 × 1000 viewBox 기준 확인</small></div></div>
-        <div className="activity"><div className="activity-icon">⌁</div><div><b>경로 문법</b><small>열린 경로와 미지원 명령 확인</small></div></div>
-      </Card>
-    </section>
-  );
-}
-
 export function BuildScreen({ toast, settings }) {
   const [inPath, setInPath] = useState("./glyphs");
   const [outPath, setOutPath] = useState("./font_out");

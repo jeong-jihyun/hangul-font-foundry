@@ -47,3 +47,16 @@ a.btn{text-decoration:none}.fullwidth{width:100%}.glyph-layout .card .btn.light{
 }
 @media(max-width:650px){.detail-card.open{bottom:calc(var(--tabbar-h) + 10px + env(safe-area-inset-bottom))}}
 @keyframes sheet{from{transform:translateY(20px);opacity:0}to{transform:none;opacity:1}}
+/* 5단계: 업로드·검수 */
+.dropzone{width:100%;border:1.5px dashed #d8d4ca;background:#fbfaf6;border-radius:16px;padding:22px 16px;display:grid;gap:6px;text-align:center;color:var(--ink);min-height:96px}
+.dropzone b{font-size:14px}.dropzone small{font-size:11px;color:var(--muted)}.dropzone.has-file{border-style:solid;border-color:var(--accent);background:#fff9f6}
+.countrow .ok strong{color:var(--green)}.countrow .bad strong{color:var(--danger)}.countrow .warn strong{color:var(--amber)}
+.progress{height:10px;background:#efece5;border-radius:99px;overflow:hidden}.progress span{display:block;height:100%;background:var(--green);border-radius:99px;min-width:2px}
+.linkbtn{border:0;background:none;color:var(--accent);font-weight:750;font-size:12px;padding:0;margin-top:12px;min-height:var(--tap);text-align:left}
+.guide summary{cursor:pointer;font-size:12px;font-weight:750;min-height:var(--tap);display:flex;align-items:center}
+.guide-steps{margin:6px 0 10px;padding-left:20px;display:grid;gap:10px}.guide-steps li{font-size:12px;line-height:1.6}.guide-steps b{display:block}.guide-steps span{color:#55574f}.guide code{background:#f4f1eb;padding:1px 5px;border-radius:6px}
+.dl-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.dl-row .btn{font-size:11px}
+@media(max-width:400px){.dl-row{grid-template-columns:1fr}}
+.glyph-cell.st-ready .mark{background:#79a17b}.glyph-cell.st-missing .mark{background:#d59a45}.glyph-cell.st-problem .mark{background:var(--danger)}
+.glyph-cell.st-missing .char{color:#b9b6ad}
+.st-line{font-size:12px;font-weight:750;margin:12px 0 0}.st-line.st-ready{color:var(--green)}.st-line.st-missing{color:var(--amber)}.st-line.st-problem{color:var(--danger)}

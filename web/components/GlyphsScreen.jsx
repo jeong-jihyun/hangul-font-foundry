@@ -48,7 +48,9 @@ function matcher(raw) {
   return { test: (i) => i.char === chars[0] || i.filename.toLowerCase().includes(q.toLowerCase()) };
 }
 
-export function GlyphsScreen({ engine, toast }) {
+const STATUS_LABEL = { ready: "✓ 제작 완료", missing: "△ 누락", problem: "✕ 고칠 곳 있음" };
+
+export function GlyphsScreen({ engine, toast, check, go }) {
   const cs = useCharset(engine.status);
   const live = cs.status === "ready";
   const items = useMemo(
@@ -56,6 +58,11 @@ export function GlyphsScreen({ engine, toast }) {
     [live, cs.status, cs.items]
   );
   const [group, setGroup] = useState("all");
+  const [st, setSt] = useState("all"); // 검수 결과 기준: 전체 / 완료 / 누락
+  // 마지막 검수 결과로 글자마다 상태를 정한다 (통과 / 아직 없음 / 파일은 있지만 문제)
+  const ready = useMemo(() => new Set(check?.ready || ""), [check]);
+  const missingSet = useMemo(() => new Set(check?.missing || ""), [check]);
+  const statusOf = (ch) => (!check ? null : ready.has(ch) ? "ready" : missingSet.has(ch) ? "missing" : "problem");
   const [q, setQ] = useState("");
   const [shown, setShown] = useState(PAGE);
   const [selected, setSelected] = useState(null);
@@ -63,12 +70,14 @@ export function GlyphsScreen({ engine, toast }) {
 
   const m = useMemo(() => matcher(q), [q]);
   const list = useMemo(
-    () => items.filter((i) => (group === "all" || i.group === group || (group === "latin" && i.group === "digit")) && m.test(i)),
-    [items, group, m]
+    () => items.filter((i) => (group === "all" || i.group === group || (group === "latin" && i.group === "digit")) && m.test(i)
+      && (st === "all" || !check || (st === "ready" ? ready.has(i.char) : !ready.has(i.char)))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, group, m, st, check]
   );
   const notInSet = m.chars ? m.chars.filter((c) => !items.some((i) => i.char === c)) : [];
-  useEffect(() => setShown(PAGE), [group, q, live]);
-  useEffect(() => setSheet(false), [group, q]);
+  useEffect(() => setShown(PAGE), [group, q, live, st]);
+  useEffect(() => setSheet(false), [group, q, st]);
   const sel = selected || items[0];
   const counts = cs.counts;
 
@@ -112,7 +121,15 @@ export function GlyphsScreen({ engine, toast }) {
         {notInSet.length > 0 && (
           <p className="muted warn-line">△ 필수 목록에 없는 글자: <b>{notInSet.join(" ")}</b> — 넣으려면 따로 그려야 합니다.</p>
         )}
-        <p className="muted" style={{ margin: "8px 0 0" }}>완료·누락 표시는 5단계에서 글리프 파일을 올리면 나타납니다.</p>
+        {check ? (
+          <div className="filters" role="group" aria-label="제작 상태" style={{ marginTop: 8 }}>
+            {[["all", "전체"], ["ready", `✓ 완료 ${check.summary.passed}`], ["missing", `△ 누락 ${(check.summary.required - check.summary.passed).toLocaleString()}`]].map(([k, l]) => (
+              <button key={k} className={"filter" + (st === k ? " active" : "")} aria-pressed={st === k} onClick={() => setSt(k)}>{l}</button>
+            ))}
+          </div>
+        ) : (
+          <button className="linkbtn" onClick={() => go("check")}>검수 탭에서 글리프 zip을 올리면 완료·누락이 표시됩니다 →</button>
+        )}
       </Card>
 
       <div className="glyph-layout">
@@ -120,10 +137,10 @@ export function GlyphsScreen({ engine, toast }) {
           <div className="glyph-grid">
             {list.length === 0 && <p className="muted">{cs.status === "loading" ? "글자 목록을 불러오는 중입니다…" : "검색 결과가 없습니다."}</p>}
             {list.slice(0, shown).map((g) => (
-              <button key={g.codepoint} className={"glyph-cell nomark" + (sel?.codepoint === g.codepoint ? " selected" : "")}
+              <button key={g.codepoint} className={"glyph-cell" + (check ? " st-" + statusOf(g.char) : " nomark") + (sel?.codepoint === g.codepoint ? " selected" : "")}
                 onClick={() => { setSelected(g); setSheet(true); }}
-                aria-label={`${g.char === " " ? "공백" : g.char} ${g.codepoint}`} aria-pressed={sel?.codepoint === g.codepoint}>
-                <span className="char">{g.char === " " ? "␠" : g.char}</span><small>{g.codepoint}</small>
+                aria-label={`${g.char === " " ? "공백" : g.char} ${g.codepoint}${check ? " " + STATUS_LABEL[statusOf(g.char)] : ""}`} aria-pressed={sel?.codepoint === g.codepoint}>
+                <i className="mark" /><span className="char">{g.char === " " ? "␠" : g.char}</span><small>{g.codepoint}</small>
               </button>
             ))}
           </div>
@@ -144,7 +161,9 @@ export function GlyphsScreen({ engine, toast }) {
                 </div>
               </div>
             </div>
-            <p className="muted" style={{ margin: "13px 0 0" }}>기준선 y=800 · SVG 절대좌표(M L H V C Q Z)와 &lt;rect&gt;만 사용합니다.</p>
+            {check && <p className={"st-line st-" + statusOf(sel.char)}>{STATUS_LABEL[statusOf(sel.char)]}{statusOf(sel.char) === "problem" ? " — 검수 탭의 문제 목록을 확인하세요" : ""}</p>}
+            <a className="btn light fullwidth" style={{ marginTop: 12 }} href={`${API_BASE}/api/v1/templates/${sel.codepoint}.svg`} download={sel.filename}>⇩ 이 글자 빈 템플릿 받기 ({sel.filename})</a>
+            <p className="muted" style={{ margin: "10px 0 0" }}>기준선 y=800 · 속이 채워진 도형(path)으로 · 절대좌표(M L H V C Q Z)와 &lt;rect&gt;만 사용</p>
           </Card>
         )}
       </div>

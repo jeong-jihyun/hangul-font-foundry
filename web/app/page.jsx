@@ -4,7 +4,8 @@ import { TABS, SETTINGS_KEY, DEFAULT_SETTINGS } from "../components/data";
 import { DemoBadge } from "../components/ui";
 import { useEngine } from "../lib/api";
 import { GlyphsScreen } from "../components/GlyphsScreen";
-import { HomeScreen, CheckScreen, BuildScreen, SettingsScreen } from "../components/Screens";
+import { CheckScreen } from "../components/CheckScreen";
+import { HomeScreen, BuildScreen, SettingsScreen } from "../components/Screens";
 
 const IDS = TABS.map((t) => t.id);
 
@@ -15,6 +16,9 @@ export default function Page() {
   const [ready, setReady] = useState(false);
   const timer = useRef();
   const engine = useEngine();
+  // 마지막 검수 결과: 글리프 탭의 완료/누락 표시에 쓰고, 새로고침해도 남도록 브라우저에 저장
+  const [check, setCheckState] = useState(null);
+  const setCheck = (c) => { setCheckState(c); try { localStorage.setItem("glyphroom-check", JSON.stringify(c)); } catch {} };
 
   // 주소 끝(#glyphs 등)으로 화면을 기억 → 새로고침·폰 뒤로가기 버튼이 자연스럽게 동작
   useEffect(() => {
@@ -27,6 +31,8 @@ export default function Page() {
     try {
       const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null");
       if (s && typeof s === "object") setSettings({ ...DEFAULT_SETTINGS, ...s });
+      const c = JSON.parse(localStorage.getItem("glyphroom-check") || "null");
+      if (c && c.summary) setCheckState(c);
     } catch {}
     setReady(true);
     // 폰에서 글자를 입력하는 동안 하단 탭을 숨겨 키보드 위 입력칸·버튼을 가리지 않게 함
@@ -76,12 +82,12 @@ export default function Page() {
         <aside className="sidebar">
           <div className="workspace-label">WORKSPACE</div>
           <nav className="nav" aria-label="주요 메뉴">{navButtons(false)}</nav>
-          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 4<br />Made for type creators.</div>
+          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 5<br />Made for type creators.</div>
         </aside>
         <main className="main">
           {tab === "home" && <HomeScreen go={go} />}
-          {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} />}
-          {tab === "check" && <CheckScreen toast={toast} />}
+          {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} go={go} />}
+          {tab === "check" && <CheckScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} />}
           {tab === "build" && ready && <BuildScreen toast={toast} settings={settings} />}
           {tab === "settings" && ready && <SettingsScreen toast={toast} settings={settings} saveSettings={saveSettings} engine={engine} />}
         </main>
