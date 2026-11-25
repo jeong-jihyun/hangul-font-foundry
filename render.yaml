@@ -1,0 +1,17 @@
+# Render 무료 웹 서비스 설정 (Blueprint). 저장소 루트 기준으로 엔진(hangul_font_kit)과 server/를 함께 씁니다.
+services:
+  - type: web
+    name: hangul-font-foundry-api
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: pip install -r server/requirements.txt
+    startCommand: uvicorn server.api.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: ALLOWED_ORIGINS
+        value: https://hangul-font-foundry.vercel.app,http://localhost:3000,http://localhost:3100

@@ -28,3 +28,9 @@
 }
 @media(max-width:360px){.main{padding:0 12px}.hero{padding:20px 16px}.welcome h1{font-size:27px}.quick-grid{grid-template-columns:1fr 1fr 1fr}.quick{padding:10px;min-height:96px}}
 body{word-break:keep-all;overflow-wrap:break-word}.checks{gap:0}.quick small{display:block;line-height:1.4}
+.demo-waking{color:#3b5a70;background:var(--blue);border-color:#c9dbe7}.dot-pulse{animation:pulse 1.2s ease-in-out infinite}@keyframes pulse{50%{opacity:.25}}
+.badge-btn{border:0;background:none;padding:0;min-height:var(--tap);display:flex;align-items:center}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px}.kv div{background:#f4f1eb;border-radius:10px;padding:10px}.kv small{display:block;color:var(--muted);font-size:9px}.kv b{font-size:12px}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:12px}.row-between .muted{min-width:0}
+@media(max-width:650px){.brand>span{display:none}.topbar .demo{white-space:nowrap}}
+@media(max-width:360px){.topbar .avatar{display:none}.topbar{padding:0 12px}}

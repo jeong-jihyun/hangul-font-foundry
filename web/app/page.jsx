@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TABS, SETTINGS_KEY, DEFAULT_SETTINGS } from "../components/data";
 import { DemoBadge } from "../components/ui";
+import { useEngine } from "../lib/api";
 import { HomeScreen, GlyphsScreen, CheckScreen, BuildScreen, SettingsScreen } from "../components/Screens";
 
 const IDS = TABS.map((t) => t.id);
@@ -12,6 +13,7 @@ export default function Page() {
   const [settings, setSettings] = useState(DEFAULT_SETTINGS);
   const [ready, setReady] = useState(false);
   const timer = useRef();
+  const engine = useEngine();
 
   // 주소 끝(#glyphs 등)으로 화면을 기억 → 새로고침·폰 뒤로가기 버튼이 자연스럽게 동작
   useEffect(() => {
@@ -67,20 +69,20 @@ export default function Page() {
     <div className="shell">
       <header className="topbar">
         <div className="brand"><div className="brandmark">ㄱ</div>glyphroom <span style={{ fontWeight: 450, color: "#96968d" }}>/ studio</span></div>
-        <div className="topright"><DemoBadge /><div className="avatar" aria-hidden="true">GF</div></div>
+        <div className="topright"><button className="badge-btn" onClick={() => go("settings")} aria-label="엔진 연결 상태 보기"><DemoBadge status={engine.status} /></button><div className="avatar" aria-hidden="true">GF</div></div>
       </header>
       <div className="layout">
         <aside className="sidebar">
           <div className="workspace-label">WORKSPACE</div>
           <nav className="nav" aria-label="주요 메뉴">{navButtons(false)}</nav>
-          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 2<br />Made for type creators.</div>
+          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 3<br />Made for type creators.</div>
         </aside>
         <main className="main">
           {tab === "home" && <HomeScreen go={go} />}
           {tab === "glyphs" && <GlyphsScreen toast={toast} />}
           {tab === "check" && <CheckScreen toast={toast} />}
           {tab === "build" && ready && <BuildScreen toast={toast} settings={settings} />}
-          {tab === "settings" && ready && <SettingsScreen toast={toast} settings={settings} saveSettings={saveSettings} />}
+          {tab === "settings" && ready && <SettingsScreen toast={toast} settings={settings} saveSettings={saveSettings} engine={engine} />}
         </main>
       </div>
       <nav className="mobilebar" aria-label="주요 메뉴 (모바일)">{navButtons(true)}</nav>

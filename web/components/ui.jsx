@@ -105,8 +105,10 @@ export function IssueRow({ severity = "error", file, message, suggestion }) {
   );
 }
 
-export function DemoBadge({ online = false, short = false }) {
-  return online
-    ? <span className="demo demo-online">● {short ? "ONLINE" : "ENGINE ONLINE"}</span>
-    : <span className="demo">● {short ? "OFFLINE" : "DEMO · ENGINE OFFLINE"}</span>;
+// 엔진 상태 배지: 항상 보이게 두고, 연결 전에는 데모임을 분명히 알린다.
+export function DemoBadge({ status = "offline", short = false }) {
+  if (status === "online") return <span className="demo demo-online" role="status">● {short ? "ONLINE" : "ENGINE ONLINE"}</span>;
+  if (status === "checking" || status === "waking")
+    return <span className="demo demo-waking" role="status"><span className="dot-pulse" aria-hidden="true">●</span> {status === "waking" ? (short ? "깨우는 중" : "ENGINE 깨우는 중") : (short ? "확인 중" : "ENGINE 확인 중")}</span>;
+  return <span className="demo" role="status">● {short ? "OFFLINE" : "DEMO · ENGINE OFFLINE"}</span>;
 }
