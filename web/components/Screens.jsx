@@ -4,65 +4,6 @@ import { SAMPLE_GLYPHS } from "./data";
 import { API_BASE } from "../lib/api";
 import { PageHead, Card, Button, Field, Result, Notice, StatusChip, ArtifactRow, IssueRow, DemoBadge } from "./ui";
 
-export function HomeScreen({ go }) {
-  return (
-    <section className="screen active" id="home">
-      <div className="welcome">
-        <div>
-          <div className="eyebrow">YOUR TYPE WORKSPACE</div>
-          <h1>좋은 글자는<br />좋은 흐름에서 시작돼요.</h1>
-          <p>글리프를 만들고, 기준을 확인하고, 나만의 폰트로 완성하세요.</p>
-        </div>
-        <div className="date">HANGUL FONT PROJECT&nbsp; / &nbsp;01</div>
-      </div>
-      <div className="hero">
-        <div className="hero-copy">
-          <div className="eyebrow">LET’S MAKE TYPE</div>
-          <h2>한 글자씩 쌓아가는<br /> 나만의 한글 서체.</h2>
-          <p>문자 세트 준비부터 SVG 검수와 폰트 빌드까지<br /> 한 곳에서 관리할 수 있어요.</p>
-          <Button onClick={() => go("glyphs")}>글리프 작업 시작하기&nbsp; ↗</Button>
-        </div>
-        <div className="hero-art" aria-hidden="true"><span>한</span></div>
-      </div>
-      <div className="metrics">
-        <div className="metric">
-          <div className="metric-top">필수 한글 세트 <span className="metric-icon">ㄱ</span></div>
-          <strong>2,350</strong><small>KS X 1001 완성형</small>
-        </div>
-        <div className="metric">
-          <div className="metric-top">샘플 제작 현황 <span className="metric-icon">▦</span></div>
-          <strong>08<span style={{ fontSize: 13, color: "#999" }}> / 12</span></strong><small>컨셉 데이터 기준</small>
-        </div>
-        <div className="metric">
-          <div className="metric-top">검수 상태 <span className="metric-icon">✓</span></div>
-          <strong style={{ fontSize: 21 }}>확인 필요</strong><small>누락 글리프 샘플 4건</small>
-        </div>
-      </div>
-      <div className="section-title"><h2>빠른 작업</h2><span>QUICK ACTIONS</span></div>
-      <div className="quick-grid">
-        <button className="quick" onClick={() => go("glyphs")}><div className="qico">▦</div><b>문자 세트</b><small>필수 글자 목록 확인</small></button>
-        <button className="quick" onClick={() => go("check")}><div className="qico">✓</div><b>SVG 규격 검수</b><small>오류와 누락 확인</small></button>
-        <button className="quick" onClick={() => go("build")}><div className="qico">↗</div><b>폰트 빌드</b><small>산출물 생성 준비</small></button>
-      </div>
-      <div className="bottom-grid">
-        <div className="panel">
-          <h3>최근 작업</h3>
-          <div className="activity"><div className="activity-icon">▦</div><div className="grow"><b>기본 한글 글리프 세트</b><small>샘플 데이터 · 방금 전</small></div><StatusChip status="warning">검수 필요</StatusChip></div>
-          <div className="activity"><div className="activity-icon">⚙</div><div className="grow"><b>폰트 기본 설정</b><small>My Hangul Font</small></div><StatusChip status="success">저장됨</StatusChip></div>
-        </div>
-        <div className="panel">
-          <h3>제작 파이프라인</h3>
-          <div className="pipeline">
-            <div className="step"><span className="stepnum">01</span><div><b>문자 세트</b><small>2,350자 목록 준비</small></div></div>
-            <div className="step"><span className="stepnum">02</span><div><b>SVG 품질 검수</b><small>규격과 경로 확인</small></div></div>
-            <div className="step"><span className="stepnum">03</span><div><b>폰트 내보내기</b><small>TTF · PNG · PDF</small></div></div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function SettingsScreen({ toast, settings, saveSettings, engine }) {
   const [form, setForm] = useState(settings);
   const [errors, setErrors] = useState({});

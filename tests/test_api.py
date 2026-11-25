@@ -162,3 +162,21 @@ def test_glyph_preview_original_and_replace():
     assert chk["summary"]["errors"] == 7 and "각" in chk["ready"]
     bad = c.post(f"/api/v1/glyphsets/{g}/files", files=[("files", ("a.txt", "x", "text/plain"))]).json()
     assert bad["rejected"] and not bad["saved"]
+
+
+def test_build_bundle_zip():
+    import io, zipfile
+    b = _wait(c.post("/api/v1/builds", json={"glyphSetId": _gid("good"), "allowMissing": True, "familyName": "Test Font"}).json()["buildId"])
+    r = c.get(f"/api/v1/builds/{b['buildId']}/bundle.zip")
+    assert r.status_code == 200 and "TestFont_font.zip" in r.headers["content-disposition"]
+    names = zipfile.ZipFile(io.BytesIO(r.content)).namelist()
+    assert "TestFont/TestFont.ttf" in names and "TestFont/README.txt" in names
+    assert c.get("/api/v1/builds/bld_000000000000/bundle.zip").status_code == 404
+
+
+def test_remove_bad_file():
+    g = _gid("mixed")
+    assert c.delete(f"/api/v1/glyphsets/{g}/files/가나.svg").json()["removed"] == "가나.svg"
+    chk = c.post("/api/v1/checks", json={"glyphSetId": g}).json()
+    assert all(i["fileName"] != "가나.svg" for i in chk["issues"])
+    assert c.delete(f"/api/v1/glyphsets/{g}/files/../x").status_code == 404

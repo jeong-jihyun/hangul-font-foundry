@@ -247,3 +247,26 @@ def artifact_file(aid):
             if os.path.isfile(path):
                 return path, a["name"], MEDIA.get(os.path.splitext(a["name"])[1], "application/octet-stream")
     return None
+
+
+@router.get("/builds/{bid}/bundle.zip")
+def bundle(bid: str, request: Request):
+    """빌드 결과를 한 번에 받기 (zip)"""
+    import io
+    import zipfile
+    from fastapi.responses import Response
+    b = BUILDS.get(bid)
+    if not b or b["status"] != "succeeded":
+        return _err(request, 404, "RESOURCE_NOT_FOUND", "받을 결과가 없습니다(보관 6시간 만료 또는 재시작). 다시 만들어 주세요.", retryable=True)
+    buf = io.BytesIO()
+    safe = builder.ps_name(b["familyName"])
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for a in b["artifacts"]:
+            p = os.path.join(b["_dir"], a["name"])
+            if os.path.isfile(p):
+                z.write(p, f"{safe}/{a['name']}")
+        z.writestr(f"{safe}/README.txt", "글꼴: " + b["familyName"] + f"\n글자 수: {b.get('glyphCount')}\n"
+                   "- .ttf: 폰트 파일 (설치용)\n- specimen.pdf: 견본\n- glyph_sheet.png / sentence.png: 미리보기 그림\n"
+                   "- license_draft.md / product_draft.md: 초안 (공개 전 전문가 확인 필요)\n")
+    return Response(buf.getvalue(), media_type="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{safe}_font.zip"'})

@@ -321,3 +321,13 @@ async def replace_glyphs(gid: str, request: Request, files: List[UploadFile] = F
         done.append({"file": name, "action": "replaced" if existed else "added"})
     os.utime(d, None)  # 보관 시간 연장
     return {"glyphSetId": gid, "saved": done, "rejected": rejected}
+
+
+@router.delete("/glyphsets/{gid}/files/{name}")
+def remove_glyph(gid: str, name: str, request: Request):
+    """잘못 들어간 파일(이름 규칙 위반 등)을 빼기"""
+    d = _set_dir(gid)
+    if not d or not SAFE_NAME.match(name) or name.startswith(".") or not os.path.isfile(os.path.join(d, name)):
+        return _err(request, 404, "RESOURCE_NOT_FOUND", "파일을 찾을 수 없습니다.")
+    os.remove(os.path.join(d, name))
+    return {"glyphSetId": gid, "removed": name}

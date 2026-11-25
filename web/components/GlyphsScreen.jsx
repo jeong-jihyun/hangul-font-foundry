@@ -68,31 +68,42 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go }) {
     [live, cs.status, cs.items]
   );
   const [group, setGroup] = useState("all");
-  const [st, setSt] = useState("all"); // 검수 결과 기준: 전체 / 완료 / 누락
+  // 검수 결과가 있으면 '내가 그린 글자'부터 보여 준다 (2,438자 중에 흩어져 있어 찾기 어려움)
+  const [st, setSt] = useState(check ? "mine" : "all");
+  useEffect(() => { if (check) setSt((v) => (v === "all" ? "mine" : v)); }, [check?.checkId]);
   // 마지막 검수 결과로 글자마다 상태를 정한다 (통과 / 아직 없음 / 파일은 있지만 문제)
   const ready = useMemo(() => new Set(check?.ready || ""), [check]);
   const missingSet = useMemo(() => new Set(check?.missing || ""), [check]);
-  const statusOf = (ch) => (!check ? null : ready.has(ch) ? "ready" : missingSet.has(ch) ? "missing" : "problem");
+  // 파일이 아예 읽히지 않는 글자(상대좌표·깨진 파일)도 '고칠 곳'으로 잡기 위해 문제 목록의 파일 이름을 함께 본다
+  const problemSet = useMemo(() => {
+    const out = new Set();
+    for (const i of check?.issues || []) {
+      const m = /^U\+([0-9A-F]{4,6})\.svg$/.exec(i.fileName);
+      if (m && i.severity === "error") out.add(String.fromCodePoint(parseInt(m[1], 16)));
+    }
+    return out;
+  }, [check]);
+  const statusOf = (ch) => (!check ? null : ready.has(ch) ? "ready" : problemSet.has(ch) ? "problem" : missingSet.has(ch) ? "missing" : "problem");
+  const isMine = (ch) => ready.has(ch) || problemSet.has(ch) || !missingSet.has(ch);
   const [q, setQ] = useState("");
   const [shown, setShown] = useState(PAGE);
   const [selected, setSelected] = useState(null);
   const [sheet, setSheet] = useState(false); // 폰: 아래에서 올라오는 상세 창
   const [ver, setVer] = useState(0);         // 글자 교체 후 그림 새로 고침용
   const [busy, setBusy] = useState(false);
-  const [view, setView] = useState("mine");   // 상세: 내 글자 / 기본 글꼴
   const fileRef = useRef();
 
   const m = useMemo(() => matcher(q), [q]);
   const list = useMemo(
     () => items.filter((i) => (group === "all" || i.group === group || (group === "latin" && i.group === "digit")) && m.test(i)
-      && (st === "all" || !check || (st === "ready" ? ready.has(i.char) : !ready.has(i.char)))),
+      && (st === "all" || !check || (st === "mine" ? isMine(i.char) : !isMine(i.char)))),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [items, group, m, st, check]
   );
   const notInSet = m.chars ? m.chars.filter((c) => !items.some((i) => i.char === c)) : [];
   useEffect(() => setShown(PAGE), [group, q, live, st]);
   useEffect(() => setSheet(false), [group, q, st]);
-  const sel = selected || items[0];
+  const sel = selected || list[0] || items[0];
   const counts = cs.counts;
 
   return (
@@ -137,7 +148,7 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go }) {
         )}
         {check ? (
           <div className="filters" role="group" aria-label="제작 상태" style={{ marginTop: 8 }}>
-            {[["all", "전체"], ["ready", `✓ 완료 ${check.summary.passed}`], ["missing", `△ 누락 ${(check.summary.required - check.summary.passed).toLocaleString()}`]].map(([k, l]) => (
+            {[["mine", `내가 그린 글자 ${items.filter((i) => isMine(i.char)).length.toLocaleString()}`], ["missing", `아직 없음 ${items.filter((i) => !isMine(i.char)).length.toLocaleString()}`], ["all", "전체"]].map(([k, l]) => (
               <button key={k} className={"filter" + (st === k ? " active" : "")} aria-pressed={st === k} onClick={() => setSt(k)}>{l}</button>
             ))}
           </div>
@@ -169,15 +180,8 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go }) {
         {sel && (
           <Card title="글리프 상세" className={"detail-card" + (sheet ? " open" : "")}
             aside={<div className="row-gap"><span className="badge">{GROUP_LABEL[sel.group]}</span><button className="sheet-close" onClick={() => setSheet(false)} aria-label="상세 닫기">✕</button></div>}>
-            {check && statusOf(sel.char) !== "missing" && (
-              <div className="filters" role="group" aria-label="보기" style={{ marginBottom: 10 }}>
-                {[["mine", "내 글자"], ["base", "기본 글꼴"]].map(([k, l]) => (
-                  <button key={k} className={"filter" + (view === k ? " active" : "")} aria-pressed={view === k} onClick={() => setView(k)}>{l}</button>
-                ))}
-              </div>
-            )}
             <div id="glyph-detail" className="preview">
-              {check && statusOf(sel.char) !== "missing" && view === "mine" ? (
+              {check && statusOf(sel.char) !== "missing" ? (
                 <div className="canvasbox" title="1000×1000 캔버스 · 빨간 선 = 기준선 y=800">
                   <MyGlyph check={check} g={sel} ver={ver} fallback={<span className="bigchar">{sel.char}</span>} />
                   <i className="baseline" aria-hidden="true" />
@@ -201,24 +205,40 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go }) {
               try {
                 const r = await replaceGlyph(sel.filename, f);
                 setCheck({ ...r, fileName: zipMemory.file?.name || check?.fileName, checkedAt: new Date().toISOString() });
-                setVer((v) => v + 1); setView("mine");
+                setVer((v) => v + 1);
                 const st = new Set(r.ready).has(sel.char) ? "통과" : "고칠 곳 있음";
                 toast(`${sel.char} 교체 완료 · 다시 검수: ${st}`);
               } catch (err) { toast(err.message); }
               finally { setBusy(false); }
             }} />
-            <div className="action-grid">
-              {check && statusOf(sel.char) !== "missing" && check.glyphSetId && (
-                <a className="btn light" href={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/files/${sel.filename}`} download={sel.filename}>⇩ 내 SVG 받기</a>
-              )}
-              <a className="btn light" href={`${API_BASE}/api/v1/templates/${sel.codepoint}.svg`} download={sel.filename}>⇩ 빈 템플릿</a>
-              <Button variant="light" loading={busy} onClick={() => {
-                if (!zipMemory.file) { toast("먼저 검수 탭에서 글리프 zip을 골라 검수해 주세요."); return; }
-                fileRef.current?.click();
-              }}>⇧ {check && statusOf(sel.char) !== "missing" ? "고친 파일로 교체" : "이 글자 파일 올리기"}</Button>
-            </div>
-            <p className="muted" style={{ margin: "8px 0 0" }}>올리는 파일 이름은 달라도 됩니다 — {sel.filename} 으로 저장한 뒤 자동으로 다시 검수합니다.</p>
-            <p className="muted" style={{ margin: "10px 0 0" }}>기준선 y=800 · 속이 채워진 도형(path)으로 · 절대좌표(M L H V C Q Z)와 &lt;rect&gt;만 사용</p>
+            {(() => {
+              const mine = check && statusOf(sel.char) !== "missing" && check.glyphSetId;
+              return (
+                <>
+                  <div className="action-grid">
+                    {mine
+                      ? <a className="btn light" href={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/files/${sel.filename}`} download={sel.filename}>⇩ 고치기용으로 받기</a>
+                      : <a className="btn light" href={`${API_BASE}/api/v1/templates/${sel.codepoint}.svg`} download={sel.filename}>⇩ 빈 바탕 받기</a>}
+                    <Button loading={busy} onClick={() => {
+                      if (!zipMemory.file) { toast("먼저 검수 탭에서 글리프 zip을 골라 검수해 주세요."); return; }
+                      fileRef.current?.click();
+                    }}>⇧ {mine ? "고친 파일 올리기" : "그린 파일 올리기"}</Button>
+                  </div>
+                  <p className="muted" style={{ margin: "8px 0 0" }}>{mine ? "받은 파일을 그리기 도구에서 고친 뒤 올리세요." : "빈 바탕에 그려 저장한 뒤 올리세요."} 파일 이름은 달라도 {sel.filename} 으로 저장하고 자동으로 다시 검수합니다.</p>
+                  <details className="more">
+                    <summary>더 보기</summary>
+                    {mine && (
+                      <div className="compare">
+                        <div><small>내 글자</small><MyGlyph check={check} g={sel} ver={ver} fallback={sel.char} /></div>
+                        <div><small>기본 글꼴(참고)</small><span className="basechar">{sel.char}</span></div>
+                      </div>
+                    )}
+                    {mine && <a className="btn light fullwidth" style={{ marginTop: 8 }} href={`${API_BASE}/api/v1/templates/${sel.codepoint}.svg`} download={sel.filename}>⇩ 새로 그릴 빈 바탕 받기</a>}
+                    <p className="muted" style={{ margin: "8px 0 0" }}>규칙: 1000×1000 · 바닥선 y=800 · 속이 채워진 도형(path) · 절대좌표(M L H V C Q Z)와 &lt;rect&gt;만</p>
+                  </details>
+                </>
+              );
+            })()}
           </Card>
         )}
       </div>

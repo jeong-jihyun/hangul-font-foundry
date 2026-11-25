@@ -86,3 +86,18 @@ a.btn{text-decoration:none}.fullwidth{width:100%}.glyph-layout .card .btn.light{
 @media(max-width:900px){.detail-card .preview{grid-template-columns:108px 1fr;gap:10px}.detail-card .canvasbox{margin:0}}
 .preview{gap:12px}
 @media(max-width:900px){.detail-card .preview-meta{grid-template-columns:1fr;gap:6px}.detail-card .preview-meta div{padding:7px 9px}}
+/* 7단계 보완: 쉬운 흐름 */
+.flow{list-style:none;margin:0;padding:0;display:grid}
+.flow li{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid #f0eee8}.flow li:first-child{border-top:0}
+.flow .num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#f0eee8;color:#8a8a80;font-size:12px;font-weight:850;flex:none}
+.flow b{display:block;font-size:13px}.flow small{display:block;font-size:11px;color:var(--muted)}
+.flow li.done .num{background:#edf2e8;color:var(--green)}
+.flow li.current .num{background:var(--accent);color:#fff}.flow li.current b{color:var(--accent)}
+.hero-art span{font-family:inherit;font-weight:850}
+.usebox{background:#f4f1eb;border-radius:14px;padding:12px 14px;display:grid;gap:3px;margin-bottom:6px}.usebox b{font-size:12px;overflow-wrap:anywhere}.usebox small{font-size:11px;color:#5d5f57}.usebox .linkbtn{margin-top:0;min-height:32px}
+.dl-main{display:grid;gap:8px}.dl-main .btn{width:100%;flex-direction:column;gap:2px;padding:12px}.dl-main .btn small{font-size:10px;font-weight:600;opacity:.85}
+details.log summary,details.more summary{cursor:pointer;font-size:12px;font-weight:750;min-height:var(--tap);display:flex;align-items:center;color:#55574f}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:8px}.compare div{background:#f4f1eb;border-radius:12px;padding:8px;text-align:center;display:grid;justify-items:center;gap:4px}
+.compare small{font-size:10px;color:var(--muted)}.compare .myglyph{width:64px;height:64px}.compare .basechar{font-family:serif;font-size:52px;line-height:64px}
+.action-grid>:last-child:nth-child(odd){grid-column:auto}
+.issue-wrap{border-top:1px solid #efede7}.issue-wrap:first-child{border-top:0}.issue-wrap .issue{border-top:0;padding-bottom:2px}.issue-acts{padding:0 0 8px 0}.issue-acts .linkbtn{margin-top:0;font-size:11px}

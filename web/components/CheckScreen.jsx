@@ -8,7 +8,7 @@ const fmtSize = (n) => (n > 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + "MB" : 
 
 // 같은 zip 을 기억해 두고, 서버가 잊어버렸으면(무료 서버 재시작) 다시 올린다
 // replacements: 글자 교체로 올린 파일들 — zip 을 다시 올릴 때 함께 다시 적용한다
-export const zipMemory = { file: null, glyphSetId: null, replacements: {} };
+export const zipMemory = { file: null, glyphSetId: null, replacements: {}, removed: [] };
 
 async function postReplacement(gid, name, file) {
   const fd = new FormData();
@@ -19,14 +19,25 @@ async function postReplacement(gid, name, file) {
 
 export async function ensureGlyphSet(file) {
   if (zipMemory.file === file && zipMemory.glyphSetId) return zipMemory.glyphSetId;
-  if (zipMemory.file !== file) zipMemory.replacements = {};
+  if (zipMemory.file !== file) { zipMemory.replacements = {}; zipMemory.removed = []; }
   const fd = new FormData();
   fd.append("file", file);
   const up = await api("/glyphsets", { method: "POST", body: fd, timeout: 120000 });
   zipMemory.file = file;
   zipMemory.glyphSetId = up.glyphSetId;
   for (const [name, f] of Object.entries(zipMemory.replacements)) await postReplacement(up.glyphSetId, name, f);
+  for (const name of zipMemory.removed) { try { await api(`/glyphsets/${up.glyphSetId}/files/${encodeURIComponent(name)}`, { method: "DELETE" }); } catch {} }
   return up.glyphSetId;
+}
+
+// 잘못 들어간 파일 빼기 (이름 규칙 위반 등) → 다시 검수
+export async function removeFile(name) {
+  if (!zipMemory.file) throw new Error("먼저 위에서 글리프 zip을 골라 검수해 주세요.");
+  const gid = await ensureGlyphSet(zipMemory.file);
+  await api(`/glyphsets/${gid}/files/${encodeURIComponent(name)}`, { method: "DELETE" });
+  zipMemory.removed.push(name);
+  delete zipMemory.replacements[name];
+  return api("/checks", { method: "POST", body: { projectId: "prj_0009", glyphSetId: gid } });
 }
 
 // 글자 1개 교체: 서버에 저장하고 기억해 둔다 (서버가 잊어도 다시 적용되도록)
@@ -165,7 +176,22 @@ export function CheckScreen({ toast, engine, check, setCheck, go }) {
           </div>
           <div style={{ marginTop: 6 }}>
             {issues.length === 0 && <p className="muted">해당하는 문제가 없습니다.</p>}
-            {issues.slice(0, shown).map((i, k) => <IssueRow key={k} severity={i.severity} file={i.fileName} message={i.message} suggestion={i.suggestion} />)}
+            {issues.slice(0, shown).map((i, k) => {
+              const glyphName = /^U\+[0-9A-F]{4,6}\.svg$/.test(i.fileName);
+              return (
+                <div key={k} className="issue-wrap">
+                  <IssueRow severity={i.severity} file={i.fileName} message={i.message} suggestion={i.suggestion} />
+                  <div className="issue-acts">
+                    {glyphName
+                      ? <button className="linkbtn" onClick={() => go("glyphs")}>글리프 탭에서 이 글자 고치기 →</button>
+                      : <button className="linkbtn" onClick={async () => {
+                          try { const r = await removeFile(i.fileName); setCheck({ ...r, fileName: zipMemory.file.name, checkedAt: new Date().toISOString() }); toast(`${i.fileName} 를 뺐습니다 · 다시 검수 완료`); }
+                          catch (e) { toast(e.message); }
+                        }}>이 파일 빼기 (글자 파일이 아님)</button>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
           {issues.length > shown && <Button variant="light" onClick={() => setShown(shown + 50)}>더 보기 · 남은 {issues.length - shown}건</Button>}
         </Card>
