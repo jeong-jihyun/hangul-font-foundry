@@ -133,3 +133,32 @@ def test_build_not_found_and_validation():
     assert c.post("/api/v1/builds", json={"glyphSetId": "gs_0000000000000000"}).status_code == 404
     assert c.post("/api/v1/builds", json={"glyphSetId": _gid("good"), "familyName": "  "}).status_code == 400
     assert c.get("/api/v1/builds/bld_nope").status_code == 404
+
+
+def test_build_artifact_download_and_pdf_pages():
+    from pypdf import PdfReader
+    import io
+    g = _gid("good")
+    b = _wait(c.post("/api/v1/builds", json={"glyphSetId": g, "allowMissing": True}).json()["buildId"])
+    arts = {a["name"]: a for a in b["artifacts"]}
+    ttf = c.get(f"/api/v1/artifacts/{arts['MyHangulFont.ttf']['artifactId']}/download")
+    assert ttf.status_code == 200 and ttf.headers["content-type"] == "font/ttf" and ttf.content[:4] == b"\x00\x01\x00\x00"
+    pdf = c.get(f"/api/v1/artifacts/{arts['specimen.pdf']['artifactId']}/download?inline=1")
+    assert pdf.headers["content-disposition"].startswith("inline") and len(PdfReader(io.BytesIO(pdf.content)).pages) == 2
+    assert c.get("/api/v1/artifacts/art_bld_000000000000_0/download").status_code == 404
+
+
+def test_glyph_preview_original_and_replace():
+    g = _gid("mixed")
+    p = c.get(f"/api/v1/glyphsets/{g}/preview/U+AC00.svg")
+    assert p.status_code == 200 and p.text.startswith("<svg") and "<script" not in p.text
+    o = c.get(f"/api/v1/glyphsets/{g}/files/U+AC01.svg")
+    assert "attachment" in o.headers["content-disposition"] and "default-src 'none'" in o.headers["content-security-policy"]
+    # 캔버스 밖 글자를 고친 파일로 교체 (파일 이름이 달라도 target 으로 맞춤)
+    fixed = RECT_OK = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><path d="M100 100 H900 V700 H100 Z"/></svg>'
+    r = c.post(f"/api/v1/glyphsets/{g}/files", files=[("files", ("내가고친것.svg", fixed, "image/svg+xml"))], data={"target": "U+AC01.svg"}).json()
+    assert r["saved"] == [{"file": "U+AC01.svg", "action": "replaced"}]
+    chk = c.post("/api/v1/checks", json={"glyphSetId": g}).json()
+    assert chk["summary"]["errors"] == 7 and "각" in chk["ready"]
+    bad = c.post(f"/api/v1/glyphsets/{g}/files", files=[("files", ("a.txt", "x", "text/plain"))]).json()
+    assert bad["rejected"] and not bad["saved"]

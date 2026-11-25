@@ -113,3 +113,12 @@ def test_transform_shapes_and_guide_layer(glyphs):
     msgs = {n: m for n, m in r["problems"]}
     assert "transform" in msgs["U+AC06.svg"] and "<circle>" in msgs["U+AC07.svg"]
     assert "U+AC08.svg" not in msgs and ord("갈") in r["found"]  # 안내선 레이어는 무시
+
+
+def test_specimen_pdf_pages(glyphs, tmp_path):
+    ttf = str(tmp_path / "t.ttf")
+    found = {ord(ch): str(glyphs / f"U+{ord(ch):04X}.svg") for ch in SAMPLE}
+    builder.build_ttf(found, CFG, ttf)
+    pdf = str(tmp_path / "s.pdf")
+    n = specimen.specimen_pdf_pages(pdf, ttf, SAMPLE * 10, "가나다 힣", family="TestFont", cols=8)
+    assert n == len(PdfReader(pdf).pages) and n >= 3  # 문장 1쪽 + 글자 여러 쪽

@@ -248,3 +248,76 @@ def template(cp: str, request: Request):
             f'{guide}\n<g id="glyph">\n</g>\n</svg>\n')
     return Response(body, media_type="image/svg+xml; charset=utf-8",
                     headers={"Content-Disposition": f'attachment; filename="{code}.svg"'})
+
+
+# ---- 7단계: 올린 글자 보기 · 내려받기 · 교체 ----
+from hangul_font_kit import svgread  # noqa: E402
+from typing import List  # noqa: E402
+from fastapi import Form  # noqa: E402
+
+NAME_RE = re.compile(r"^U\+([0-9A-F]{4,6})\.svg$")
+
+
+def _clean_svg(path):
+    """사용자 SVG 를 그대로 보내지 않고, 엔진이 읽은 도형만으로 새로 그린 안전한 SVG (스크립트·외부 참조 제거)"""
+    g = svgread.read_svg(path)
+    parts = []
+    for sp in g["subpaths"]:
+        d = []
+        for seg in sp["segs"]:
+            k, v = seg[0], seg[1:]
+            d.append(k + " " + " ".join(f"{x:g}" for x in v))
+        parts.append(" ".join(d) + (" Z" if sp["closed"] else ""))
+    d = " ".join(parts)
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><path fill="#20221f" fill-rule="nonzero" d="{d}"/></svg>'
+
+
+@router.get("/glyphsets/{gid}/preview/{name}")
+def glyph_preview(gid: str, name: str, request: Request):
+    d = _set_dir(gid)
+    if not d or not NAME_RE.match(name) or not os.path.isfile(os.path.join(d, name)):
+        return _err(request, 404, "RESOURCE_NOT_FOUND", "글자 파일을 찾을 수 없습니다.")
+    try:
+        body = _clean_svg(os.path.join(d, name))
+    except Exception:
+        return _err(request, 422, "GLYPH_VALIDATION_FAILED", "이 파일은 읽을 수 없어 모양을 보여 줄 수 없습니다. 검수 결과를 확인하세요.")
+    return Response(body, media_type="image/svg+xml", headers={"Cache-Control": "no-store"})
+
+
+@router.get("/glyphsets/{gid}/files/{name}")
+def glyph_original(gid: str, name: str, request: Request):
+    d = _set_dir(gid)
+    if not d or not SAFE_NAME.match(name) or name.startswith(".") or not os.path.isfile(os.path.join(d, name)):
+        return _err(request, 404, "RESOURCE_NOT_FOUND", "글자 파일을 찾을 수 없습니다.")
+    with open(os.path.join(d, name), "rb") as f:
+        data = f.read()
+    # 원본은 내려받기 전용 (브라우저에서 열려도 스크립트가 돌지 않게)
+    return Response(data, media_type="image/svg+xml", headers={
+        "Content-Disposition": f'attachment; filename="{name}"', "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'",
+        "X-Content-Type-Options": "nosniff", "Cache-Control": "no-store"})
+
+
+@router.post("/glyphsets/{gid}/files")
+async def replace_glyphs(gid: str, request: Request, files: List[UploadFile] = File(...), target: str | None = Form(default=None)):
+    """고친 SVG 몇 개만 올려 바꾸기. target 을 주면(파일 1개일 때) 그 이름으로 저장 — 파일 이름을 몰라도 됨."""
+    d = _set_dir(gid)
+    if not d:
+        return _err(request, 404, "RESOURCE_NOT_FOUND", "올린 글리프가 서버에 없습니다. zip을 다시 올려 주세요.", retryable=True)
+    if len(files) > 50:
+        return _err(request, 413, "PAYLOAD_TOO_LARGE", "한 번에 50개까지 바꿀 수 있습니다.")
+    if target and (len(files) != 1 or not NAME_RE.match(target)):
+        return _err(request, 400, "VALIDATION_ERROR", "이름 지정은 파일 1개, U+AC00.svg 형식일 때만 됩니다.")
+    done, rejected = [], []
+    for f in files:
+        name = target or os.path.basename((f.filename or "").replace("\\", "/"))
+        data = await f.read(MAX_SVG + 1)
+        if not name.lower().endswith(".svg") or not SAFE_NAME.match(name) or name.startswith("."):
+            rejected.append({"file": f.filename, "reason": "SVG 파일이 아님"}); continue
+        if len(data) > MAX_SVG:
+            rejected.append({"file": name, "reason": "1MB 초과"}); continue
+        existed = os.path.isfile(os.path.join(d, name))
+        with open(os.path.join(d, name), "wb") as out:
+            out.write(data)
+        done.append({"file": name, "action": "replaced" if existed else "added"})
+    os.utime(d, None)  # 보관 시간 연장
+    return {"glyphSetId": gid, "saved": done, "rejected": rejected}

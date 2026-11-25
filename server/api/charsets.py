@@ -87,8 +87,18 @@ def get_charset(cid: str, request: Request):
 
 
 @router.get("/artifacts/{aid}/download")
-def download(aid: str, request: Request):
-    # 4단계에서는 문자 세트 CSV 만. 빌드 산출물(TTF·PNG·PDF)은 7단계에서 추가.
+def download(aid: str, request: Request, inline: int = 0):
+    # 빌드 산출물(TTF·PNG·PDF·초안) — 7단계
+    if aid.startswith("art_bld_"):
+        from fastapi.responses import FileResponse
+        from .builds import artifact_file
+        f = artifact_file(aid)
+        if not f:
+            from .main import error
+            return error(request, 404, "RESOURCE_NOT_FOUND", "파일을 찾을 수 없습니다(서버 보관 6시간 만료 또는 재시작). 다시 빌드해 주세요.", retryable=True)
+        path, name, media = f
+        disp = "inline" if inline else "attachment"
+        return FileResponse(path, media_type=media, headers={"Content-Disposition": f'{disp}; filename="{name}"', "Cache-Control": "private, max-age=3600"})
     if not (aid.startswith("art_cs_") and aid.endswith("_csv")):
         return not_found(request, "산출물")
     opt = parse_id(aid[4:-4])

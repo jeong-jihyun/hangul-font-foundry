@@ -140,8 +140,8 @@ def _run(bid):
         b["sentence"] = {"text": cfg["sample_sentence"], "missing": "".join(sen["missing"])}
 
         guard(); _set_step(b, "pdf", "running")
-        specimen.specimen_pdf(os.path.join(out, "specimen.pdf"), sheet, sen_png)
-        _set_step(b, "pdf", "done")
+        pages = specimen.specimen_pdf_pages(os.path.join(out, "specimen.pdf"), ttf, chars, cfg["sample_sentence"], family=cfg["family_name"])
+        _set_step(b, "pdf", "done", f"{pages}쪽")
 
         guard(); _set_step(b, "drafts", "running")
         with open(os.path.join(out, "license_draft.md"), "w", encoding="utf-8") as f:
@@ -229,3 +229,20 @@ def cancel_build(bid: str, request: Request):
         return _err(request, 409, "JOB_CONFLICT", "이미 끝난 작업이라 취소할 수 없습니다.", {"status": b["status"]})
     b["_cancel"] = True
     return {"buildId": bid, "status": "cancelling"}
+
+
+MEDIA = {".ttf": "font/ttf", ".png": "image/png", ".pdf": "application/pdf", ".md": "text/markdown; charset=utf-8"}
+
+
+def artifact_file(aid):
+    """art_bld_xxx_N → (경로, 파일 이름, 형식). 없으면 None"""
+    m = re.fullmatch(r"art_(bld_[0-9a-f]{12})_(\d+)", aid or "")
+    if not m or m.group(1) not in BUILDS:
+        return None
+    b = BUILDS[m.group(1)]
+    for a in b["artifacts"]:
+        if a["artifactId"] == aid:
+            path = os.path.join(b["_dir"], a["name"])
+            if os.path.isfile(path):
+                return path, a["name"], MEDIA.get(os.path.splitext(a["name"])[1], "application/octet-stream")
+    return None
