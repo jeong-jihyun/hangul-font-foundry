@@ -2,3 +2,8 @@ __pycache__/
 .pytest_cache/
 *.pyc
 output/
+
+# web
+web/node_modules/
+web/.next/
+web/.vercel/
