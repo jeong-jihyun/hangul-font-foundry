@@ -1,7 +1,7 @@
 "use client";
 // 빌드 화면 (6단계): 실제 엔진으로 TTF·견본·초안을 만들고 진행 상태를 실시간으로 보여 준다.
 import { useEffect, useRef, useState } from "react";
-import { api } from "../lib/api";
+import { API_BASE, api } from "../lib/api";
 import { zipMemory, ensureGlyphSet } from "./CheckScreen";
 import { PageHead, Card, Button, Field, Result, Notice, StatusChip, ArtifactRow } from "./ui";
 
@@ -15,6 +15,48 @@ const DESC = {
   "license_draft.md": "라이선스 사용범위 초안 (전문가 확인 필요)",
   "product_draft.md": "상품 설명 초안",
 };
+
+const dl = (a, inline) => `${API_BASE}/api/v1/artifacts/${a.artifactId}/download${inline ? "?inline=1" : ""}`;
+
+// 만든 TTF 를 브라우저에 불러와 직접 문장을 써 본다. 폰트에 없는 글자는 점선 네모로 표시
+// (그냥 두면 기본 글꼴로 대신 보여서 '있는 것처럼' 착각하게 됨)
+function FontPreview({ build, defaultText }) {
+  const ttf = build.artifacts.find((a) => a.type === "ttf");
+  const [state, setState] = useState("loading");
+  const [text, setText] = useState(defaultText || "다람쥐 헌 쳇바퀴에 타고파");
+  const [size, setSize] = useState(48);
+  const fam = "GR_" + build.buildId;
+  const have = new Set(build.chars || "");
+  useEffect(() => {
+    let off = false;
+    (async () => {
+      try {
+        const res = await fetch(dl(ttf));
+        if (!res.ok) throw new Error();
+        const face = new FontFace(fam, await res.arrayBuffer());
+        await face.load();
+        document.fonts.add(face);
+        if (!off) setState("ready");
+      } catch { if (!off) setState("error"); }
+    })();
+    return () => { off = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [build.buildId]);
+  const missing = [...new Set([...text].filter((c) => c.trim() && !have.has(c)))];
+  return (
+    <Card title="만든 폰트로 써 보기" aside={state === "ready" ? <StatusChip status="success">폰트 불러옴</StatusChip> : state === "error" ? <StatusChip status="error">불러오기 실패</StatusChip> : <StatusChip status="running">불러오는 중</StatusChip>}>
+      <Field id="pvText" label="미리보기 문장 (직접 바꿔 보세요)">
+        <textarea id="pvText" value={text} onChange={(e) => setText(e.target.value)} rows={2} />
+      </Field>
+      <div className="rangerow"><span className="muted">크기</span><input type="range" min={16} max={120} value={size} onChange={(e) => setSize(+e.target.value)} aria-label="글자 크기" /><b className="mono">{size}px</b></div>
+      <div className="fontpreview" style={{ fontFamily: state === "ready" ? `"${fam}"` : "inherit", fontSize: size }}>
+        {[...text].map((c, i) => (c === " " || c === "\n" || have.has(c)) ? <span key={i}>{c}</span> : <span key={i} className="miss" title={`${c} — 폰트에 없음`} />)}
+      </div>
+      <p className="muted" style={{ margin: "8px 0 0" }}>{missing.length ? `점선 네모 = 이 폰트에 없는 글자: ${missing.join(" ")}` : "입력한 글자가 모두 폰트에 들어 있습니다."}</p>
+      {state === "error" && <Notice>폰트 파일을 불러오지 못했습니다. 서버 보관(6시간)이 끝났다면 다시 빌드해 주세요.</Notice>}
+    </Card>
+  );
+}
 
 // 화면을 옮겨 다녀도 진행 중인 빌드를 잃지 않도록 기억
 let lastBuild = null;
@@ -152,14 +194,22 @@ export function BuildScreen({ toast, settings, engine, check, go }) {
         </Card>
       )}
 
+      {build?.status === "succeeded" && build.artifacts?.some((a) => a.type === "ttf") && <FontPreview build={build} defaultText={settings.preview} />}
+
       <Card title={build?.status === "succeeded" ? "만들어진 파일" : "생성 예정 산출물"} aside="OUTPUT FILES">
         {build?.status === "succeeded" ? (
           <>
             {build.artifacts.map((a) => (
               <ArtifactRow key={a.artifactId} type={TYPE_LABEL[a.type] || "FILE"} name={a.name} desc={(DESC[a.name] || "설치 및 배포용 폰트 파일") + " · " + fmtSize(a.size)}
-                right={<span className="badge">7단계</span>} />
+                right={<span className="acts">
+                  {(a.type === "pdf" || a.type === "png") && <a className="btn light" href={dl(a, true)} target="_blank" rel="noopener">보기</a>}
+                  <a className="btn light" href={dl(a)} download={a.name} aria-label={`${a.name} 내려받기`}>⇩ 받기</a>
+                </span>} />
             ))}
-            <p className="muted" style={{ margin: "10px 0 0" }}>내려받기와 화면 미리보기는 7단계에서 열립니다. 서버에 6시간 보관됩니다.</p>
+            {build.artifacts.find((a) => a.name === "glyph_sheet.png") && (
+              <img className="sheetimg" alt="글자 견본표" loading="lazy" src={dl(build.artifacts.find((a) => a.name === "glyph_sheet.png"), true)} />
+            )}
+            <p className="muted" style={{ margin: "10px 0 0" }}>서버에 6시간 보관됩니다. 꼭 필요한 파일은 지금 받아 두세요. 라이선스·상품 문안은 초안입니다(공개 전 전문가 확인).</p>
           </>
         ) : (
           [["TTF", "TrueType Font", "설치 및 배포용 폰트 파일"], ["PNG", "글자 견본표 · 문장 미리보기", "글자별 모양 확인"], ["PDF", "폰트 견본 PDF", "인쇄 및 공유용"], ["TXT", "상품 설명 · 라이선스 초안", "판매 등록 전 검토용"]]

@@ -1,9 +1,10 @@
 "use client";
 // 글리프 화면 (4단계): 서버가 만든 실제 필수 글자 목록을 보여 준다.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE, api } from "../lib/api";
 import { SAMPLE_GLYPHS } from "./data";
 import { PageHead, Card, Button, Result, StatusChip } from "./ui";
+import { replaceGlyph, zipMemory } from "./CheckScreen";
 
 const PAGE = 60; // 한 번에 그리는 글자 수 (2,438자를 한꺼번에 그리면 폰이 느려짐)
 const GROUPS = [["all", "전체"], ["hangul", "한글"], ["latin", "숫자·영문"], ["symbol", "기호"]];
@@ -50,7 +51,16 @@ function matcher(raw) {
 
 const STATUS_LABEL = { ready: "✓ 제작 완료", missing: "△ 누락", problem: "✕ 고칠 곳 있음" };
 
-export function GlyphsScreen({ engine, toast, check, go }) {
+// 내가 그린 글자 그림 (서버가 다시 그린 안전한 SVG). 못 불러오면 기본 글꼴 글자로 대신 보여 준다.
+function MyGlyph({ check, g, ver, fallback }) {
+  const [bad, setBad] = useState(false);
+  useEffect(() => setBad(false), [ver, check?.glyphSetId]);
+  if (!check?.glyphSetId || bad) return fallback;
+  return <img className="myglyph" alt={`${g.char} 내가 그린 모양`} loading="lazy"
+    src={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/preview/${g.filename}?v=${ver}`} onError={() => setBad(true)} />;
+}
+
+export function GlyphsScreen({ engine, toast, check, setCheck, go }) {
   const cs = useCharset(engine.status);
   const live = cs.status === "ready";
   const items = useMemo(
@@ -67,6 +77,10 @@ export function GlyphsScreen({ engine, toast, check, go }) {
   const [shown, setShown] = useState(PAGE);
   const [selected, setSelected] = useState(null);
   const [sheet, setSheet] = useState(false); // 폰: 아래에서 올라오는 상세 창
+  const [ver, setVer] = useState(0);         // 글자 교체 후 그림 새로 고침용
+  const [busy, setBusy] = useState(false);
+  const [view, setView] = useState("mine");   // 상세: 내 글자 / 기본 글꼴
+  const fileRef = useRef();
 
   const m = useMemo(() => matcher(q), [q]);
   const list = useMemo(
@@ -140,7 +154,11 @@ export function GlyphsScreen({ engine, toast, check, go }) {
               <button key={g.codepoint} className={"glyph-cell" + (check ? " st-" + statusOf(g.char) : " nomark") + (sel?.codepoint === g.codepoint ? " selected" : "")}
                 onClick={() => { setSelected(g); setSheet(true); }}
                 aria-label={`${g.char === " " ? "공백" : g.char} ${g.codepoint}${check ? " " + STATUS_LABEL[statusOf(g.char)] : ""}`} aria-pressed={sel?.codepoint === g.codepoint}>
-                <i className="mark" /><span className="char">{g.char === " " ? "␠" : g.char}</span><small>{g.codepoint}</small>
+                <i className="mark" />
+                {check && statusOf(g.char) !== "missing"
+                  ? <span className="char"><MyGlyph check={check} g={g} ver={ver} fallback={g.char === " " ? "␠" : g.char} /></span>
+                  : <span className="char">{g.char === " " ? "␠" : g.char}</span>}
+                <small>{g.codepoint}</small>
               </button>
             ))}
           </div>
@@ -151,8 +169,22 @@ export function GlyphsScreen({ engine, toast, check, go }) {
         {sel && (
           <Card title="글리프 상세" className={"detail-card" + (sheet ? " open" : "")}
             aside={<div className="row-gap"><span className="badge">{GROUP_LABEL[sel.group]}</span><button className="sheet-close" onClick={() => setSheet(false)} aria-label="상세 닫기">✕</button></div>}>
+            {check && statusOf(sel.char) !== "missing" && (
+              <div className="filters" role="group" aria-label="보기" style={{ marginBottom: 10 }}>
+                {[["mine", "내 글자"], ["base", "기본 글꼴"]].map(([k, l]) => (
+                  <button key={k} className={"filter" + (view === k ? " active" : "")} aria-pressed={view === k} onClick={() => setView(k)}>{l}</button>
+                ))}
+              </div>
+            )}
             <div id="glyph-detail" className="preview">
-              <div className="bigchar">{sel.char === " " ? "␠" : sel.char}</div>
+              {check && statusOf(sel.char) !== "missing" && view === "mine" ? (
+                <div className="canvasbox" title="1000×1000 캔버스 · 빨간 선 = 기준선 y=800">
+                  <MyGlyph check={check} g={sel} ver={ver} fallback={<span className="bigchar">{sel.char}</span>} />
+                  <i className="baseline" aria-hidden="true" />
+                </div>
+              ) : (
+                <div className="bigchar">{sel.char === " " ? "␠" : sel.char}</div>
+              )}
               <div>
                 <div className="code">{sel.codepoint}</div>
                 <div className="preview-meta">
@@ -162,7 +194,30 @@ export function GlyphsScreen({ engine, toast, check, go }) {
               </div>
             </div>
             {check && <p className={"st-line st-" + statusOf(sel.char)}>{STATUS_LABEL[statusOf(sel.char)]}{statusOf(sel.char) === "problem" ? " — 검수 탭의 문제 목록을 확인하세요" : ""}</p>}
-            <a className="btn light fullwidth" style={{ marginTop: 12 }} href={`${API_BASE}/api/v1/templates/${sel.codepoint}.svg`} download={sel.filename}>⇩ 이 글자 빈 템플릿 받기 ({sel.filename})</a>
+            <input ref={fileRef} type="file" accept=".svg,image/svg+xml" hidden onChange={async (e) => {
+              const f = e.target.files?.[0]; e.target.value = "";
+              if (!f) return;
+              setBusy(true);
+              try {
+                const r = await replaceGlyph(sel.filename, f);
+                setCheck({ ...r, fileName: zipMemory.file?.name || check?.fileName, checkedAt: new Date().toISOString() });
+                setVer((v) => v + 1); setView("mine");
+                const st = new Set(r.ready).has(sel.char) ? "통과" : "고칠 곳 있음";
+                toast(`${sel.char} 교체 완료 · 다시 검수: ${st}`);
+              } catch (err) { toast(err.message); }
+              finally { setBusy(false); }
+            }} />
+            <div className="action-grid">
+              {check && statusOf(sel.char) !== "missing" && check.glyphSetId && (
+                <a className="btn light" href={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/files/${sel.filename}`} download={sel.filename}>⇩ 내 SVG 받기</a>
+              )}
+              <a className="btn light" href={`${API_BASE}/api/v1/templates/${sel.codepoint}.svg`} download={sel.filename}>⇩ 빈 템플릿</a>
+              <Button variant="light" loading={busy} onClick={() => {
+                if (!zipMemory.file) { toast("먼저 검수 탭에서 글리프 zip을 골라 검수해 주세요."); return; }
+                fileRef.current?.click();
+              }}>⇧ {check && statusOf(sel.char) !== "missing" ? "고친 파일로 교체" : "이 글자 파일 올리기"}</Button>
+            </div>
+            <p className="muted" style={{ margin: "8px 0 0" }}>올리는 파일 이름은 달라도 됩니다 — {sel.filename} 으로 저장한 뒤 자동으로 다시 검수합니다.</p>
             <p className="muted" style={{ margin: "10px 0 0" }}>기준선 y=800 · 속이 채워진 도형(path)으로 · 절대좌표(M L H V C Q Z)와 &lt;rect&gt;만 사용</p>
           </Card>
         )}

@@ -70,3 +70,19 @@ a.btn{text-decoration:none}.fullwidth{width:100%}.glyph-layout .card .btn.light{
 .stepper .st-waiting b{color:#9a9a90}
 .progress span.bad{background:var(--danger)}
 .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* 7단계: 내 글자 보기 · 교체 · 결과 미리보기 */
+.glyph-cell .char{display:flex;align-items:center;justify-content:center;height:34px}
+.myglyph{width:34px;height:34px;display:block}
+.canvasbox{position:relative;width:150px;height:150px;background:#fff;border:1px solid var(--line);border-radius:8px;margin:0 auto}
+.canvasbox .myglyph{width:100%;height:100%}.canvasbox .bigchar{font-size:100px;line-height:150px;margin:0;text-align:center}
+.canvasbox .baseline{position:absolute;left:0;right:0;top:80%;border-top:1px dashed #d85d3f99;pointer-events:none}
+.action-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.action-grid .btn{font-size:11px;padding:10px 8px;width:100%}.action-grid>:last-child:nth-child(odd){grid-column:span 2}
+@media(max-width:900px){.detail-card .canvasbox{width:96px;height:96px}.detail-card .canvasbox .bigchar{font-size:64px;line-height:96px}}
+.fontpreview{border:1px solid var(--line);background:#fff;border-radius:14px;padding:16px;min-height:90px;line-height:1.35;word-break:break-all;overflow-wrap:anywhere}
+.fontpreview .miss{display:inline-block;width:.8em;height:.8em;border:1.5px dashed #c9a27a;border-radius:3px;vertical-align:-.05em;margin:0 .05em}
+.rangerow{display:flex;align-items:center;gap:10px;margin:10px 0}.rangerow input{flex:1;accent-color:var(--accent);min-height:var(--tap)}
+.artifact .acts{display:flex;gap:6px}.artifact .acts .btn{min-height:40px;padding:8px 10px;font-size:11px}
+.sheetimg{width:100%;border:1px solid var(--line);border-radius:12px;margin-top:10px;background:#fff}
+@media(max-width:900px){.detail-card .preview{grid-template-columns:108px 1fr;gap:10px}.detail-card .canvasbox{margin:0}}
+.preview{gap:12px}
+@media(max-width:900px){.detail-card .preview-meta{grid-template-columns:1fr;gap:6px}.detail-card .preview-meta div{padding:7px 9px}}

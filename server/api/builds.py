@@ -155,6 +155,7 @@ def _run(bid):
                            "size": os.path.getsize(os.path.join(out, fn)), "artifactId": f"art_{bid}_{i}"}
                           for i, fn in enumerate(sorted(os.listdir(out), key=lambda x: (not x.endswith(".ttf"), x)))]
         b["glyphCount"] = n
+        b["chars"] = "".join(chars)  # 화면 미리보기에서 폰트에 없는 글자를 □로 표시하는 데 씀
         b["status"] = "succeeded"
         _log(b, "빌드 완료")
     except Cancelled:

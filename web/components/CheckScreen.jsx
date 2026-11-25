@@ -7,16 +7,39 @@ import { PageHead, Card, Button, Result, Notice, StatusChip, IssueRow } from "./
 const fmtSize = (n) => (n > 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + "MB" : Math.max(1, Math.round(n / 1024)) + "KB");
 
 // 같은 zip 을 기억해 두고, 서버가 잊어버렸으면(무료 서버 재시작) 다시 올린다
-export const zipMemory = { file: null, glyphSetId: null };
+// replacements: 글자 교체로 올린 파일들 — zip 을 다시 올릴 때 함께 다시 적용한다
+export const zipMemory = { file: null, glyphSetId: null, replacements: {} };
+
+async function postReplacement(gid, name, file) {
+  const fd = new FormData();
+  fd.append("files", file);
+  fd.append("target", name);
+  return api(`/glyphsets/${gid}/files`, { method: "POST", body: fd });
+}
 
 export async function ensureGlyphSet(file) {
   if (zipMemory.file === file && zipMemory.glyphSetId) return zipMemory.glyphSetId;
+  if (zipMemory.file !== file) zipMemory.replacements = {};
   const fd = new FormData();
   fd.append("file", file);
   const up = await api("/glyphsets", { method: "POST", body: fd, timeout: 120000 });
   zipMemory.file = file;
   zipMemory.glyphSetId = up.glyphSetId;
+  for (const [name, f] of Object.entries(zipMemory.replacements)) await postReplacement(up.glyphSetId, name, f);
   return up.glyphSetId;
+}
+
+// 글자 1개 교체: 서버에 저장하고 기억해 둔다 (서버가 잊어도 다시 적용되도록)
+export async function replaceGlyph(name, file) {
+  if (!zipMemory.file) throw new Error("먼저 검수 탭에서 글리프 zip을 올려 주세요.");
+  let gid = await ensureGlyphSet(zipMemory.file);
+  try { await postReplacement(gid, name, file); }
+  catch (e) {
+    if (e.status !== 404) throw e;
+    zipMemory.glyphSetId = null; gid = await ensureGlyphSet(zipMemory.file); await postReplacement(gid, name, file);
+  }
+  zipMemory.replacements[name] = file;
+  return api("/checks", { method: "POST", body: { projectId: "prj_0009", glyphSetId: gid } });
 }
 
 export function GuideCard({ open = false }) {
