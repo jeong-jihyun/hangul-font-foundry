@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { TABS, SETTINGS_KEY, DEFAULT_SETTINGS } from "../components/data";
 import { DemoBadge } from "../components/ui";
 import { useEngine } from "../lib/api";
-import { HomeScreen, GlyphsScreen, CheckScreen, BuildScreen, SettingsScreen } from "../components/Screens";
+import { GlyphsScreen } from "../components/GlyphsScreen";
+import { HomeScreen, CheckScreen, BuildScreen, SettingsScreen } from "../components/Screens";
 
 const IDS = TABS.map((t) => t.id);
 
@@ -75,11 +76,11 @@ export default function Page() {
         <aside className="sidebar">
           <div className="workspace-label">WORKSPACE</div>
           <nav className="nav" aria-label="주요 메뉴">{navButtons(false)}</nav>
-          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 3<br />Made for type creators.</div>
+          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 4<br />Made for type creators.</div>
         </aside>
         <main className="main">
           {tab === "home" && <HomeScreen go={go} />}
-          {tab === "glyphs" && <GlyphsScreen toast={toast} />}
+          {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} />}
           {tab === "check" && <CheckScreen toast={toast} />}
           {tab === "build" && ready && <BuildScreen toast={toast} settings={settings} />}
           {tab === "settings" && ready && <SettingsScreen toast={toast} settings={settings} saveSettings={saveSettings} engine={engine} />}

@@ -63,66 +63,6 @@ export function HomeScreen({ go }) {
   );
 }
 
-export function GlyphsScreen({ toast }) {
-  const [filter, setFilter] = useState("all");
-  const [q, setQ] = useState("");
-  const [selected, setSelected] = useState(SAMPLE_GLYPHS[0]);
-  const [charsetShown, setCharsetShown] = useState(false);
-  const query = q.trim().toLowerCase();
-  const list = SAMPLE_GLYPHS.filter(
-    (g) => (filter === "all" || (filter === "ready" ? g[2] : !g[2])) &&
-      (g[0].includes(query) || g[1].toLowerCase().includes(query))
-  );
-  return (
-    <section className="screen active" id="glyphs">
-      <PageHead eyebrow="GLYPH LIBRARY" title="글리프 라이브러리" desc="제작할 글자를 찾고 준비 상태를 관리합니다." badge="KS X 1001 · 2,350자" />
-      <Card title="문자 세트" aside="한글 완성형 + 숫자·영문·기호">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <div><strong style={{ fontSize: 28, letterSpacing: "-.05em" }}>2,350</strong><div className="muted">필수 한글 글리프</div></div>
-          <Button onClick={() => { setCharsetShown(true); toast("문자 세트 생성 요청을 준비했습니다."); }}>목록 생성&nbsp; ↗</Button>
-        </div>
-        <Result show={charsetShown}><strong>문자 세트 생성 요청 준비 완료</strong>실제 CSV 파일 생성은 Python 엔진 연결 후 실행됩니다.</Result>
-      </Card>
-      <Card title="글리프 탐색" aside="샘플 12자">
-        <div className="toolbar">
-          <input className="search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="문자 또는 코드 포인트 · 가, U+AC00" aria-label="글리프 검색" />
-          <div className="filters" role="group" aria-label="상태 필터">
-            {[["all", "전체"], ["ready", "완료"], ["missing", "누락"]].map(([k, l]) => (
-              <button key={k} className={"filter" + (filter === k ? " active" : "")} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l}</button>
-            ))}
-          </div>
-        </div>
-      </Card>
-      <div className="glyph-layout">
-        <Card title="문자 미리보기" aside="선택하여 상세 확인">
-          <div className="glyph-grid">
-            {list.length === 0 && <p className="muted">검색 결과가 없습니다.</p>}
-            {list.map((g) => (
-              <button key={g[1]} className={"glyph-cell" + (!g[2] ? " missing" : "") + (selected[0] === g[0] ? " selected" : "")}
-                onClick={() => setSelected(g)} aria-label={`${g[0]} ${g[1]} ${g[2] ? "제작 완료" : "누락"}`} aria-pressed={selected[0] === g[0]}>
-                <i className="mark" /><span className="char">{g[0]}</span><small>{g[1]}</small>
-              </button>
-            ))}
-          </div>
-        </Card>
-        <Card title="글리프 상세" aside={<StatusChip status={selected[2] ? "success" : "warning"}>{selected[2] ? "제작 완료" : "누락"}</StatusChip>}>
-          <div className="preview">
-            <div className="bigchar">{selected[0]}</div>
-            <div>
-              <div className="code">{selected[1]}</div>
-              <div className="preview-meta">
-                <div><small>파일명</small><b className="mono">{selected[1]}.svg</b></div>
-                <div><small>캔버스</small><b>1000 × 1000</b></div>
-              </div>
-            </div>
-          </div>
-          <p className="muted" style={{ margin: "13px 0 0" }}>기준선 y=800 · SVG 절대좌표 규칙을 사용합니다.</p>
-        </Card>
-      </div>
-    </section>
-  );
-}
-
 const SAMPLE_ISSUES = [
   { severity: "error", file: "U+AC07.svg", message: "필수 글자 파일이 없습니다 (갇)", suggestion: "glyphs 폴더에 U+AC07.svg 를 추가하세요" },
   { severity: "error", file: "ga.svg", message: "파일명 규칙에 맞지 않습니다", suggestion: "U+AC00.svg 처럼 코드 포인트 이름으로 바꾸세요" },
