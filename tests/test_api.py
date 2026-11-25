@@ -55,3 +55,43 @@ def test_charset_csv_download():
     lines = r.content.decode("utf-8-sig").splitlines()
     assert lines[0] == "character,codepoint,filename" and len(lines) == 2351
     assert c.get("/api/v1/artifacts/art_x/download").status_code == 404
+
+
+def _upload(content, name="g.zip"):
+    return c.post("/api/v1/glyphsets", files={"file": (name, content, "application/zip")})
+
+
+def test_sample_upload_and_check_mixed():
+    z = c.get("/api/v1/samples/mixed.zip")
+    assert z.status_code == 200
+    up = _upload(z.content).json()
+    assert up["svgCount"] == 27 and up["skipped"] == 1  # README.txt 건너뜀
+    r = c.post("/api/v1/checks", json={"glyphSetId": up["glyphSetId"]}).json()
+    s = r["summary"]
+    assert s["passed"] == 20 and s["errors"] == 8 and s["required"] == 2438
+    codes = {i["code"] for i in r["issues"] if i["severity"] == "error"}
+    assert {"FILENAME", "OUT_OF_CANVAS", "OPEN_PATH", "COMMAND", "TRANSFORM", "SHAPE", "VIEWBOX"} <= codes
+    assert all(i["suggestion"] for i in r["issues"])
+    assert "가" in r["ready"] and "힝" in r["missing"]
+    assert c.get(f"/api/v1/checks/{r['checkId']}").json()["summary"] == s
+
+
+def test_upload_rejects_bad_input():
+    assert _upload(b"not a zip").json()["error"]["code"] == "VALIDATION_ERROR"
+    import io, zipfile
+    b = io.BytesIO()
+    with zipfile.ZipFile(b, "w") as z:
+        z.writestr("../../evil.txt", "x")
+    assert _upload(b.getvalue()).status_code == 400  # SVG 없음 + 경로 탈출 파일은 무시
+    assert c.post("/api/v1/checks", json={"glyphSetId": "gs_0000000000000000"}).status_code == 404
+
+
+def test_template_is_valid_empty_glyph():
+    r = c.get("/api/v1/templates/U+AC00.svg")
+    assert r.status_code == 200 and 'id="guide"' in r.text
+    import tempfile, os
+    from hangul_font_kit import svgread
+    with tempfile.NamedTemporaryFile("w", suffix=".svg", delete=False, encoding="utf-8") as f:
+        f.write(r.text)
+    g = svgread.read_svg(f.name); os.unlink(f.name)
+    assert g["subpaths"] == [] and g["unsupported"] == []  # 안내선은 글자로 읽히지 않음

@@ -29,6 +29,11 @@ def check_folder(folder, config, required=None):
             g = read_svg(p)
         except SvgError as e:
             problems.append((n, str(e))); continue
+        if g.get("transforms"):
+            problems.append((n, "transform(변형)이 있음 — 그리기 도구에서 '변형 적용'·'그룹 해제' 후 다시 저장"))
+        if g.get("unsupported"):
+            tags = ", ".join(f"<{t}>" for t in g["unsupported"])
+            problems.append((n, f"지원하지 않는 도형 {tags} — '패스(경로)로 변환' 후 다시 저장"))
         if g["viewBox"] and tuple(g["viewBox"]) != (0, 0, canvas, canvas):
             problems.append((n, f"viewBox {g['viewBox']} (필요 0 0 {canvas} {canvas})"))
         if not g["subpaths"]:

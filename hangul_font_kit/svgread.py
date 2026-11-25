@@ -50,6 +50,14 @@ def parse_path(d):
     return subs
 
 
+UNSUPPORTED = {"circle", "ellipse", "polygon", "polyline", "line", "text", "image", "use"}
+
+
+def _is_guide(el):
+    """id 가 guide 로 시작하는 요소(안내선 레이어)는 글자로 읽지 않는다."""
+    return (el.get("id") or "").lower().startswith("guide")
+
+
 def read_svg(path):
     if os.path.getsize(path) > MAX_BYTES:
         raise SvgError("SVG 파일이 너무 큼 (1MB 초과)")
@@ -59,16 +67,28 @@ def read_svg(path):
         raise SvgError(f"SVG 형식 오류: {e}")
     vb = root.get("viewBox")
     box = tuple(float(a) for a in vb.replace(",", " ").split()) if vb else None
-    subs = []
-    for el in root.iter():
+    subs, transforms, unsupported = [], 0, set()
+
+    def walk(el):
+        nonlocal subs, transforms
+        if _is_guide(el):
+            return
         tag = el.tag.split("}")[-1]
+        if el.get("transform"):
+            transforms += 1
         if tag == "path" and el.get("d"):
             subs += parse_path(el.get("d"))
         elif tag == "rect":
             x, y, w, h = (float(el.get(k, 0)) for k in ("x", "y", "width", "height"))
             subs.append({"closed": True, "start": (x, y),
                          "segs": [("M", x, y), ("L", x + w, y), ("L", x + w, y + h), ("L", x, y + h)]})
-    return {"viewBox": box, "subpaths": subs}
+        elif tag in UNSUPPORTED:
+            unsupported.add(tag)
+        for ch in el:
+            walk(ch)
+
+    walk(root)
+    return {"viewBox": box, "subpaths": subs, "transforms": transforms, "unsupported": sorted(unsupported)}
 
 
 def points(subpaths):

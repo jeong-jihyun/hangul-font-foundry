@@ -103,3 +103,13 @@ def test_cli_flow(glyphs, tmp_path):
     assert all((out / f).exists() for f in ("MyHangulFont.ttf", "glyph_sheet.png", "specimen.pdf", "license_draft.md", "product_draft.md"))
     assert main(["charset", "--out", str(tmp_path / "c.csv")]) == 0
     assert main(["check", "--glyphs", str(tmp_path / "none")]) == 2
+
+
+def test_transform_shapes_and_guide_layer(glyphs):
+    write(glyphs, "U+AC06.svg", RECT.replace("<path ", '<path transform="translate(10 0)" '))  # 변형 (TC-05)
+    write(glyphs, "U+AC07.svg", RECT.replace("</svg>", '<circle cx="5" cy="5" r="3"/></svg>'))  # 지원 안 하는 도형
+    write(glyphs, "U+AC08.svg", RECT.replace("</svg>", '<g id="guide"><line x1="0" y1="800" x2="1000" y2="800"/><rect x="-50" y="0" width="1" height="1"/></g></svg>'))
+    r = checker.check_folder(str(glyphs), CFG, required=SAMPLE)
+    msgs = {n: m for n, m in r["problems"]}
+    assert "transform" in msgs["U+AC06.svg"] and "<circle>" in msgs["U+AC07.svg"]
+    assert "U+AC08.svg" not in msgs and ord("갈") in r["found"]  # 안내선 레이어는 무시
