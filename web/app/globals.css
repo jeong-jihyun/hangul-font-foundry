@@ -60,3 +60,13 @@ a.btn{text-decoration:none}.fullwidth{width:100%}.glyph-layout .card .btn.light{
 .glyph-cell.st-ready .mark{background:#79a17b}.glyph-cell.st-missing .mark{background:#d59a45}.glyph-cell.st-problem .mark{background:var(--danger)}
 .glyph-cell.st-missing .char{color:#b9b6ad}
 .st-line{font-size:12px;font-weight:750;margin:12px 0 0}.st-line.st-ready{color:var(--green)}.st-line.st-missing{color:var(--amber)}.st-line.st-problem{color:var(--danger)}
+/* 6단계: 빌드 진행 */
+.stepper{list-style:none;margin:14px 0 6px;padding:0;display:grid;gap:2px}
+.stepper li{display:flex;align-items:center;gap:12px;padding:9px 0;border-top:1px solid #f0eee8}.stepper li:first-child{border-top:0}
+.stepper .dot{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;background:#f0eee8;color:#9a9a90;flex:none}
+.stepper b{display:block;font-size:12px}.stepper small{display:block;font-size:10px;color:var(--muted)}
+.stepper .st-running .dot{background:var(--blue);color:#3b5a70;animation:pulse 1.2s ease-in-out infinite}
+.stepper .st-done .dot{background:#edf2e8;color:var(--green)}.stepper .st-failed .dot{background:var(--danger-soft);color:var(--danger)}
+.stepper .st-waiting b{color:#9a9a90}
+.progress span.bad{background:var(--danger)}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}

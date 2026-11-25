@@ -63,59 +63,6 @@ export function HomeScreen({ go }) {
   );
 }
 
-export function BuildScreen({ toast, settings }) {
-  const [inPath, setInPath] = useState("./glyphs");
-  const [outPath, setOutPath] = useState("./font_out");
-  const [name, setName] = useState(settings.name);
-  const [allow, setAllow] = useState(false);
-  const [errors, setErrors] = useState({});
-  const [done, setDone] = useState(null);
-  const run = () => {
-    const p = inPath.trim(), o = outPath.trim();
-    const e = {};
-    if (!p) e.in = "글리프 폴더를 입력해 주세요.";
-    if (!o) e.out = "출력 폴더를 입력해 주세요.";
-    if (!name.trim()) e.name = "글꼴 이름을 입력해 주세요.";
-    setErrors(e);
-    if (Object.keys(e).length) return;
-    setDone({ p, o, allow });
-    toast("빌드 요청 설정을 확인했습니다.");
-  };
-  const files = [
-    ["TTF", "TrueType Font", "설치 및 배포용 폰트 파일", "필수"],
-    ["PNG", "글자 견본표", "문자별 디자인 확인"],
-    ["PDF", "폰트 견본 PDF", "인쇄 및 공유용"],
-    ["TXT", "상품 설명 · 라이선스 초안", "판매 등록 전 검토용"],
-  ];
-  return (
-    <section className="screen active" id="build">
-      <PageHead eyebrow="FONT EXPORT" title="폰트 빌드" desc="설정을 확인하고 제작 산출물 생성을 준비합니다." badge="CLI · build" />
-      <Card title="빌드 설정" aside={<span className="badge">CONFIG</span>}>
-        <div className="formgrid">
-          <Field id="buildPath" label="글리프 폴더" error={errors.in}><input id="buildPath" value={inPath} onChange={(e) => setInPath(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} /></Field>
-          <Field id="outPath" label="출력 폴더" error={errors.out}><input id="outPath" value={outPath} onChange={(e) => setOutPath(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} /></Field>
-        </div>
-        <Field id="fontName" label="글꼴 패밀리 이름" error={errors.name}><input id="fontName" value={name} onChange={(e) => setName(e.target.value)} /></Field>
-        <label className="checkrow"><input type="checkbox" checked={allow} onChange={(e) => setAllow(e.target.checked)} /> 누락 글리프 허용 <span className="muted">(시험용 옵션)</span></label>
-        <Notice>누락 글리프가 있으면 기본 빌드는 중단됩니다. 시험용 빌드에서만 누락 허용을 켜세요.</Notice>
-        <Button onClick={run}>빌드 요청 준비&nbsp; ↗</Button>
-        <Result show={!!done} tone={done?.allow ? "warning" : "success"}>
-          {done && (<>
-            <strong>빌드 요청 설정이 준비되었습니다.</strong>
-            입력: {done.p}<br />출력: {done.o}<br />누락 허용: {done.allow ? "△ 시험용 ON" : "OFF"}<br /><br />
-            현재는 UI 데모이므로 실제 TTF·PNG·PDF 파일을 생성하지 않습니다.
-          </>)}
-        </Result>
-      </Card>
-      <Card title="생성 예정 산출물" aside="OUTPUT FILES">
-        {files.map(([t, b, s, tag]) => (
-          <ArtifactRow key={t} type={t} name={b} desc={s} right={tag && <span className="badge">{tag}</span>} />
-        ))}
-      </Card>
-    </section>
-  );
-}
-
 export function SettingsScreen({ toast, settings, saveSettings, engine }) {
   const [form, setForm] = useState(settings);
   const [errors, setErrors] = useState({});

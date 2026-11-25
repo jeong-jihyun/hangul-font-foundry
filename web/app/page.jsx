@@ -5,7 +5,8 @@ import { DemoBadge } from "../components/ui";
 import { useEngine } from "../lib/api";
 import { GlyphsScreen } from "../components/GlyphsScreen";
 import { CheckScreen } from "../components/CheckScreen";
-import { HomeScreen, BuildScreen, SettingsScreen } from "../components/Screens";
+import { BuildScreen } from "../components/BuildScreen";
+import { HomeScreen, SettingsScreen } from "../components/Screens";
 
 const IDS = TABS.map((t) => t.id);
 
@@ -82,13 +83,13 @@ export default function Page() {
         <aside className="sidebar">
           <div className="workspace-label">WORKSPACE</div>
           <nav className="nav" aria-label="주요 메뉴">{navButtons(false)}</nav>
-          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 5<br />Made for type creators.</div>
+          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 6<br />Made for type creators.</div>
         </aside>
         <main className="main">
           {tab === "home" && <HomeScreen go={go} />}
           {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} go={go} />}
           {tab === "check" && <CheckScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} />}
-          {tab === "build" && ready && <BuildScreen toast={toast} settings={settings} />}
+          {tab === "build" && ready && <BuildScreen toast={toast} settings={settings} engine={engine} check={check} go={go} />}
           {tab === "settings" && ready && <SettingsScreen toast={toast} settings={settings} saveSettings={saveSettings} engine={engine} />}
         </main>
       </div>
