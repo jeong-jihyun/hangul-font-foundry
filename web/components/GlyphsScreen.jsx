@@ -52,8 +52,8 @@ export function GlyphsScreen({ engine, toast }) {
   const cs = useCharset(engine.status);
   const live = cs.status === "ready";
   const items = useMemo(
-    () => (live ? cs.items : SAMPLE_GLYPHS.map(([c, cp]) => ({ char: c, codepoint: cp, filename: cp + ".svg", group: "hangul" }))),
-    [live, cs.items]
+    () => (live ? cs.items : cs.status === "error" ? SAMPLE_GLYPHS.map(([c, cp]) => ({ char: c, codepoint: cp, filename: cp + ".svg", group: "hangul" })) : []),
+    [live, cs.status, cs.items]
   );
   const [group, setGroup] = useState("all");
   const [q, setQ] = useState("");
@@ -118,7 +118,7 @@ export function GlyphsScreen({ engine, toast }) {
       <div className="glyph-layout">
         <Card title="문자 미리보기" aside="선택하여 상세 확인">
           <div className="glyph-grid">
-            {list.length === 0 && <p className="muted">검색 결과가 없습니다.</p>}
+            {list.length === 0 && <p className="muted">{cs.status === "loading" ? "글자 목록을 불러오는 중입니다…" : "검색 결과가 없습니다."}</p>}
             {list.slice(0, shown).map((g) => (
               <button key={g.codepoint} className={"glyph-cell nomark" + (sel?.codepoint === g.codepoint ? " selected" : "")}
                 onClick={() => { setSelected(g); setSheet(true); }}
