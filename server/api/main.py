@@ -17,7 +17,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import hangul_font_kit
 
-API_VERSION = "0.3.0"
+API_VERSION = "0.4.0"
 STARTED_AT = datetime.now(timezone.utc)
 
 app = FastAPI(title="Glyphroom API", version=API_VERSION, docs_url="/api/v1/docs", openapi_url="/api/v1/openapi.json")
@@ -30,7 +30,7 @@ app.add_middleware(
     allow_origin_regex=r"https://hangul-font-foundry-[a-z0-9-]+-jeong-jihyuns-projects\.vercel\.app",
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Content-Type"],
-    expose_headers=["X-Request-Id"],
+    expose_headers=["X-Request-Id", "Content-Disposition"],
     max_age=600,
 )
 
@@ -101,3 +101,9 @@ def health():
         "startedAt": STARTED_AT.isoformat().replace("+00:00", "Z"),
         "time": now_iso(),
     }
+
+
+# 기능별 API (단계마다 추가)
+from .charsets import router as charsets_router  # noqa: E402
+
+app.include_router(charsets_router)
