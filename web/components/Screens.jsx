@@ -1,23 +1,7 @@
 "use client";
 import { useState } from "react";
 import { SAMPLE_GLYPHS } from "./data";
-
-function PageHead({ eyebrow, title, desc, badge }) {
-  return (
-    <div className="pagehead">
-      <div>
-        <div className="eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
-        <p>{desc}</p>
-      </div>
-      <span className="badge">{badge}</span>
-    </div>
-  );
-}
-
-function Result({ show, children }) {
-  return <div className={"result" + (show ? " show" : "")} role="status">{children}</div>;
-}
+import { PageHead, Card, Button, Field, Result, Notice, StatusChip, ArtifactRow, IssueRow, DemoBadge } from "./ui";
 
 export function HomeScreen({ go }) {
   return (
@@ -33,9 +17,9 @@ export function HomeScreen({ go }) {
       <div className="hero">
         <div className="hero-copy">
           <div className="eyebrow">LET’S MAKE TYPE</div>
-          <h2>한 글자씩 쌓아가는<br />나만의 한글 서체.</h2>
-          <p>문자 세트 준비부터 SVG 검수와 폰트 빌드까지<br />한 곳에서 관리할 수 있어요.</p>
-          <button className="btn" onClick={() => go("glyphs")}>글리프 작업 시작하기&nbsp; ↗</button>
+          <h2>한 글자씩 쌓아가는<br /> 나만의 한글 서체.</h2>
+          <p>문자 세트 준비부터 SVG 검수와 폰트 빌드까지<br /> 한 곳에서 관리할 수 있어요.</p>
+          <Button onClick={() => go("glyphs")}>글리프 작업 시작하기&nbsp; ↗</Button>
         </div>
         <div className="hero-art" aria-hidden="true"><span>한</span></div>
       </div>
@@ -62,8 +46,8 @@ export function HomeScreen({ go }) {
       <div className="bottom-grid">
         <div className="panel">
           <h3>최근 작업</h3>
-          <div className="activity"><div className="activity-icon">▦</div><div><b>기본 한글 글리프 세트</b><small>샘플 데이터 · 방금 전</small></div><span className="state">검수 필요</span></div>
-          <div className="activity"><div className="activity-icon">⚙</div><div><b>폰트 기본 설정</b><small>My Hangul Font</small></div><span className="state" style={{ background: "#edf2e8", color: "#54714a" }}>저장됨</span></div>
+          <div className="activity"><div className="activity-icon">▦</div><div className="grow"><b>기본 한글 글리프 세트</b><small>샘플 데이터 · 방금 전</small></div><StatusChip status="warning">검수 필요</StatusChip></div>
+          <div className="activity"><div className="activity-icon">⚙</div><div className="grow"><b>폰트 기본 설정</b><small>My Hangul Font</small></div><StatusChip status="success">저장됨</StatusChip></div>
         </div>
         <div className="panel">
           <h3>제작 파이프라인</h3>
@@ -91,96 +75,99 @@ export function GlyphsScreen({ toast }) {
   return (
     <section className="screen active" id="glyphs">
       <PageHead eyebrow="GLYPH LIBRARY" title="글리프 라이브러리" desc="제작할 글자를 찾고 준비 상태를 관리합니다." badge="KS X 1001 · 2,350자" />
-      <div className="card">
-        <div className="cardhead"><h3>문자 세트</h3><span className="muted">한글 완성형 + 숫자·영문·기호</span></div>
+      <Card title="문자 세트" aside="한글 완성형 + 숫자·영문·기호">
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
           <div><strong style={{ fontSize: 28, letterSpacing: "-.05em" }}>2,350</strong><div className="muted">필수 한글 글리프</div></div>
-          <button className="btn" onClick={() => { setCharsetShown(true); toast("문자 세트 생성 요청을 준비했습니다."); }}>목록 생성&nbsp; ↗</button>
+          <Button onClick={() => { setCharsetShown(true); toast("문자 세트 생성 요청을 준비했습니다."); }}>목록 생성&nbsp; ↗</Button>
         </div>
         <Result show={charsetShown}><strong>문자 세트 생성 요청 준비 완료</strong>실제 CSV 파일 생성은 Python 엔진 연결 후 실행됩니다.</Result>
-      </div>
-      <div className="card">
-        <div className="cardhead"><h3>글리프 탐색</h3><span className="muted">샘플 12자</span></div>
+      </Card>
+      <Card title="글리프 탐색" aside="샘플 12자">
         <div className="toolbar">
-          <input className="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="문자 또는 코드 포인트 검색 · 가, U+AC00" aria-label="글리프 검색" />
+          <input className="search" type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="문자 또는 코드 포인트 · 가, U+AC00" aria-label="글리프 검색" />
           <div className="filters" role="group" aria-label="상태 필터">
             {[["all", "전체"], ["ready", "완료"], ["missing", "누락"]].map(([k, l]) => (
               <button key={k} className={"filter" + (filter === k ? " active" : "")} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l}</button>
             ))}
           </div>
         </div>
-      </div>
+      </Card>
       <div className="glyph-layout">
-        <div className="card">
-          <div className="cardhead"><h3>문자 미리보기</h3><span className="muted">선택하여 상세 확인</span></div>
+        <Card title="문자 미리보기" aside="선택하여 상세 확인">
           <div className="glyph-grid">
             {list.length === 0 && <p className="muted">검색 결과가 없습니다.</p>}
             {list.map((g) => (
               <button key={g[1]} className={"glyph-cell" + (!g[2] ? " missing" : "") + (selected[0] === g[0] ? " selected" : "")}
-                onClick={() => setSelected(g)} aria-label={`${g[0]} ${g[1]} ${g[2] ? "제작 완료" : "누락"}`}>
+                onClick={() => setSelected(g)} aria-label={`${g[0]} ${g[1]} ${g[2] ? "제작 완료" : "누락"}`} aria-pressed={selected[0] === g[0]}>
                 <i className="mark" /><span className="char">{g[0]}</span><small>{g[1]}</small>
               </button>
             ))}
           </div>
-        </div>
-        <div className="card">
-          <div className="cardhead"><h3>글리프 상세</h3>
-            <span className="badge" style={{ background: selected[2] ? "#edf2e8" : "#f7efdf" }}>{selected[2] ? "✓ 제작 완료" : "△ 누락"}</span>
-          </div>
+        </Card>
+        <Card title="글리프 상세" aside={<StatusChip status={selected[2] ? "success" : "warning"}>{selected[2] ? "제작 완료" : "누락"}</StatusChip>}>
           <div className="preview">
             <div className="bigchar">{selected[0]}</div>
             <div>
               <div className="code">{selected[1]}</div>
               <div className="preview-meta">
-                <div><small>파일명</small><b>{selected[1]}.svg</b></div>
+                <div><small>파일명</small><b className="mono">{selected[1]}.svg</b></div>
                 <div><small>캔버스</small><b>1000 × 1000</b></div>
               </div>
             </div>
           </div>
           <p className="muted" style={{ margin: "13px 0 0" }}>기준선 y=800 · SVG 절대좌표 규칙을 사용합니다.</p>
-        </div>
+        </Card>
       </div>
     </section>
   );
 }
 
+const SAMPLE_ISSUES = [
+  { severity: "error", file: "U+AC07.svg", message: "필수 글자 파일이 없습니다 (갇)", suggestion: "glyphs 폴더에 U+AC07.svg 를 추가하세요" },
+  { severity: "error", file: "ga.svg", message: "파일명 규칙에 맞지 않습니다", suggestion: "U+AC00.svg 처럼 코드 포인트 이름으로 바꾸세요" },
+  { severity: "warning", file: "U+AC10.svg", message: "경로가 캔버스(1000×1000) 밖으로 나갔습니다", suggestion: "좌표를 0~1000 안으로 옮기세요" },
+];
+
 export function CheckScreen({ toast }) {
   const [path, setPath] = useState("./glyphs");
+  const [error, setError] = useState("");
   const [done, setDone] = useState(null);
   const run = () => {
     const p = path.trim();
-    if (!p) { toast("글리프 폴더 경로를 입력해 주세요."); return; }
+    if (!p) { setError("글리프 폴더 경로를 입력해 주세요."); return; }
+    setError("");
     setDone(p);
     toast("데모 검수 결과를 표시했습니다.");
   };
   return (
     <section className="screen active" id="check">
       <PageHead eyebrow="QUALITY CONTROL" title="SVG 규격 검수" desc="폰트 빌드 전에 글리프 파일의 구조와 규격을 확인합니다." badge="CLI · check" />
-      <div className="card">
-        <div className="cardhead"><h3>검수 대상</h3><span className="badge">INPUT</span></div>
-        <div className="field">
-          <label htmlFor="glyphPath">글리프 폴더 경로</label>
-          <input id="glyphPath" value={path} onChange={(e) => setPath(e.target.value)} />
-          <div className="help">예: 프로젝트 루트 기준 ./glyphs (5단계에서 zip 올리기로 바뀝니다)</div>
-        </div>
+      <Card title="검수 대상" aside={<span className="badge">INPUT</span>}>
+        <Field id="glyphPath" label="글리프 폴더 경로" help="예: ./glyphs (5단계에서 zip 올리기로 바뀝니다)" error={error}>
+          <input id="glyphPath" value={path} onChange={(e) => setPath(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} />
+        </Field>
         <div className="checks">
           <label className="checkrow"><input type="checkbox" checked disabled readOnly /> 필수 글자 누락 및 U+XXXX.svg 파일명 규칙</label>
           <label className="checkrow"><input type="checkbox" checked disabled readOnly /> viewBox 0 0 1000 1000 및 기준선 규격</label>
           <label className="checkrow"><input type="checkbox" checked disabled readOnly /> 열린 경로 및 미지원 SVG 명령</label>
         </div>
-        <div className="notice">지원 요소: &lt;path&gt; 절대좌표 M L H V C Q Z 및 &lt;rect&gt;. transform, 상대좌표, arc(A)는 지원하지 않습니다.</div>
-        <button className="btn" onClick={run}>검수 실행&nbsp; ↗</button>
-        <Result show={!!done}>
+        <Notice>지원 요소: &lt;path&gt; 절대좌표 M L H V C Q Z 및 &lt;rect&gt;. transform, 상대좌표, arc(A)는 지원하지 않습니다.</Notice>
+        <Button onClick={run}>검수 실행&nbsp; ↗</Button>
+        <Result show={!!done} tone="warning">
           <strong>데모 검수 결과 — 실제 파일 검사는 수행하지 않았습니다.</strong>
-          검사 대상: {done}<br />샘플 데이터: 누락 글리프 4건 · 파일 규격 확인 필요<br />Python 엔진 연결 후 실제 검사 결과로 대체됩니다.
+          검사 대상: {done} · 샘플 오류 2건 · 주의 1건
         </Result>
-      </div>
-      <div className="card">
-        <div className="cardhead"><h3>검수 항목 안내</h3><span className="muted">CHECKLIST</span></div>
+      </Card>
+      {done && (
+        <Card title="문제 목록 (샘플)" aside={<StatusChip status="error">오류 2</StatusChip>}>
+          {SAMPLE_ISSUES.map((i) => <IssueRow key={i.file} {...i} />)}
+        </Card>
+      )}
+      <Card title="검수 항목 안내" aside="CHECKLIST">
         <div className="activity"><div className="activity-icon">!</div><div><b>파일 누락</b><small>문자 세트 대비 SVG 파일이 없는지 확인</small></div></div>
         <div className="activity"><div className="activity-icon">⌗</div><div><b>캔버스 규격</b><small>1000 × 1000 viewBox 기준 확인</small></div></div>
         <div className="activity"><div className="activity-icon">⌁</div><div><b>경로 문법</b><small>열린 경로와 미지원 명령 확인</small></div></div>
-      </div>
+      </Card>
     </section>
   );
 }
@@ -190,10 +177,16 @@ export function BuildScreen({ toast, settings }) {
   const [outPath, setOutPath] = useState("./font_out");
   const [name, setName] = useState(settings.name);
   const [allow, setAllow] = useState(false);
+  const [errors, setErrors] = useState({});
   const [done, setDone] = useState(null);
   const run = () => {
     const p = inPath.trim(), o = outPath.trim();
-    if (!p || !o) { toast("입력·출력 경로를 확인해 주세요."); return; }
+    const e = {};
+    if (!p) e.in = "글리프 폴더를 입력해 주세요.";
+    if (!o) e.out = "출력 폴더를 입력해 주세요.";
+    if (!name.trim()) e.name = "글꼴 이름을 입력해 주세요.";
+    setErrors(e);
+    if (Object.keys(e).length) return;
     setDone({ p, o, allow });
     toast("빌드 요청 설정을 확인했습니다.");
   };
@@ -206,40 +199,44 @@ export function BuildScreen({ toast, settings }) {
   return (
     <section className="screen active" id="build">
       <PageHead eyebrow="FONT EXPORT" title="폰트 빌드" desc="설정을 확인하고 제작 산출물 생성을 준비합니다." badge="CLI · build" />
-      <div className="card">
-        <div className="cardhead"><h3>빌드 설정</h3><span className="badge">CONFIG</span></div>
+      <Card title="빌드 설정" aside={<span className="badge">CONFIG</span>}>
         <div className="formgrid">
-          <div className="field"><label htmlFor="buildPath">글리프 폴더</label><input id="buildPath" value={inPath} onChange={(e) => setInPath(e.target.value)} /></div>
-          <div className="field"><label htmlFor="outPath">출력 폴더</label><input id="outPath" value={outPath} onChange={(e) => setOutPath(e.target.value)} /></div>
+          <Field id="buildPath" label="글리프 폴더" error={errors.in}><input id="buildPath" value={inPath} onChange={(e) => setInPath(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} /></Field>
+          <Field id="outPath" label="출력 폴더" error={errors.out}><input id="outPath" value={outPath} onChange={(e) => setOutPath(e.target.value)} autoCapitalize="off" autoCorrect="off" spellCheck={false} /></Field>
         </div>
-        <div className="field"><label htmlFor="fontName">글꼴 패밀리 이름</label><input id="fontName" value={name} onChange={(e) => setName(e.target.value)} /></div>
+        <Field id="fontName" label="글꼴 패밀리 이름" error={errors.name}><input id="fontName" value={name} onChange={(e) => setName(e.target.value)} /></Field>
         <label className="checkrow"><input type="checkbox" checked={allow} onChange={(e) => setAllow(e.target.checked)} /> 누락 글리프 허용 <span className="muted">(시험용 옵션)</span></label>
-        <div className="notice">누락 글리프가 있으면 기본 빌드는 중단됩니다. 시험용 빌드에서만 누락 허용을 켜세요.</div>
-        <button className="btn" onClick={run}>빌드 요청 준비&nbsp; ↗</button>
-        <Result show={!!done}>
+        <Notice>누락 글리프가 있으면 기본 빌드는 중단됩니다. 시험용 빌드에서만 누락 허용을 켜세요.</Notice>
+        <Button onClick={run}>빌드 요청 준비&nbsp; ↗</Button>
+        <Result show={!!done} tone={done?.allow ? "warning" : "success"}>
           {done && (<>
             <strong>빌드 요청 설정이 준비되었습니다.</strong>
-            입력: {done.p}<br />출력: {done.o}<br />누락 허용: {done.allow ? "시험용 ON" : "OFF"}<br /><br />
+            입력: {done.p}<br />출력: {done.o}<br />누락 허용: {done.allow ? "△ 시험용 ON" : "OFF"}<br /><br />
             현재는 UI 데모이므로 실제 TTF·PNG·PDF 파일을 생성하지 않습니다.
           </>)}
         </Result>
-      </div>
-      <div className="card">
-        <div className="cardhead"><h3>생성 예정 산출물</h3><span className="muted">OUTPUT FILES</span></div>
+      </Card>
+      <Card title="생성 예정 산출물" aside="OUTPUT FILES">
         {files.map(([t, b, s, tag]) => (
-          <div className="artifact" key={t}><div className="filetype">{t}</div><div><b>{b}</b><small>{s}</small></div>{tag && <span className="badge">{tag}</span>}</div>
+          <ArtifactRow key={t} type={t} name={b} desc={s} right={tag && <span className="badge">{tag}</span>} />
         ))}
-      </div>
+      </Card>
     </section>
   );
 }
 
 export function SettingsScreen({ toast, settings, saveSettings }) {
   const [form, setForm] = useState(settings);
+  const [errors, setErrors] = useState({});
   const [saved, setSaved] = useState(false);
-  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const set = (k) => (e) => { setForm({ ...form, [k]: e.target.value }); setSaved(false); };
   const save = () => {
-    if (!form.name.trim()) { toast("글꼴 이름을 입력해 주세요."); return; }
+    const e = {};
+    if (!form.name.trim()) e.name = "글꼴 이름을 입력해 주세요.";
+    if (form.spacing === "" || isNaN(Number(form.spacing))) e.spacing = "숫자로 입력해 주세요. (예: 0, -10, 20)";
+    if (!form.preview.trim()) e.preview = "미리보기 문장을 입력해 주세요.";
+    setErrors(e);
+    if (Object.keys(e).length) return;
     saveSettings({ ...form, name: form.name.trim() });
     setSaved(true);
     toast("설정값을 브라우저에 저장했습니다.");
@@ -247,19 +244,17 @@ export function SettingsScreen({ toast, settings, saveSettings }) {
   return (
     <section className="screen active" id="settings">
       <PageHead eyebrow="PROJECT SETTINGS" title="프로젝트 설정" desc="폰트 메타데이터와 미리보기 기본값을 관리합니다." badge="font.json" />
-      <div className="card">
-        <div className="cardhead"><h3>기본 정보</h3><span className="muted">FONT PROFILE</span></div>
-        <div className="field"><label htmlFor="settingName">글꼴 패밀리 이름</label><input id="settingName" value={form.name} onChange={set("name")} /></div>
-        <div className="field"><label htmlFor="spacing">자간</label><input id="spacing" type="number" step="0.1" inputMode="decimal" value={form.spacing} onChange={set("spacing")} /></div>
-        <div className="field"><label htmlFor="previewText">미리보기 문장</label><textarea id="previewText" value={form.preview} onChange={set("preview")} /></div>
-        <button className="btn" onClick={save}>설정 저장</button>
-        <Result show={saved}><strong>설정값을 이 브라우저에 저장했습니다.</strong>실제 config/font.json 반영은 API 연결 후 지원됩니다.</Result>
-      </div>
-      <div className="card">
-        <div className="cardhead"><h3>엔진 연결</h3><span className="demo">● OFFLINE</span></div>
+      <Card title="기본 정보" aside="FONT PROFILE">
+        <Field id="settingName" label="글꼴 패밀리 이름" error={errors.name}><input id="settingName" value={form.name} onChange={set("name")} /></Field>
+        <Field id="spacing" label="자간" error={errors.spacing}><input id="spacing" type="number" step="0.1" inputMode="decimal" value={form.spacing} onChange={set("spacing")} /></Field>
+        <Field id="previewText" label="미리보기 문장" error={errors.preview}><textarea id="previewText" value={form.preview} onChange={set("preview")} /></Field>
+        <Button onClick={save}>설정 저장</Button>
+        <Result show={saved}><strong>✓ 설정값을 이 브라우저에 저장했습니다.</strong>실제 config/font.json 반영은 API 연결 후 지원됩니다.</Result>
+      </Card>
+      <Card title="엔진 연결" aside={<DemoBadge short />}>
         <p className="muted">Python 3.10+ · fontTools · Pillow · reportlab · pypdf</p>
-        <div className="notice">현재 화면은 컨셉 데모입니다. 실제 SVG 검사와 TTF·PNG·PDF 생성은 Python 엔진/API 연결 전까지 수행하지 않습니다. 마켓 입점·심사·등록은 사용자가 직접 진행합니다.</div>
-      </div>
+        <Notice>현재 화면은 컨셉 데모입니다. 실제 SVG 검사와 TTF·PNG·PDF 생성은 Python 엔진/API 연결 전까지 수행하지 않습니다. 마켓 입점·심사·등록은 사용자가 직접 진행합니다.</Notice>
+      </Card>
     </section>
   );
 }
