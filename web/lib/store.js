@@ -47,9 +47,9 @@ export async function svgsFromZip(file) {
   return out;
 }
 
-// 새 zip 전체 저장: 400자 또는 약 3MB씩 나눠 보내고(Vercel 요청 크기 한도 4.5MB),
-// 마지막 묶음에서 새 zip 에 없는 예전 글자를 지운다
-export async function saveAllGlyphs(id, items, onProgress) {
+// zip 글자 저장: 400자 또는 약 3MB씩 나눠 보냄(Vercel 요청 크기 한도 4.5MB).
+// 기본은 합치기(같은 이름만 덮어씀). replaceAll 이면 마지막 묶음에서 새 zip 에 없는 예전 글자를 지운다
+export async function saveAllGlyphs(id, items, onProgress, { replaceAll = false } = {}) {
   const names = items.map((i) => i.name);
   const parts = [];
   let cur = [], size = 0;
@@ -63,7 +63,7 @@ export async function saveAllGlyphs(id, items, onProgress) {
     const last = i === parts.length - 1;
     await call(`/api/projects/${id}/glyphs`, {
       method: "POST",
-      body: { files: parts[i], replaceAll: last, keepNames: last ? names : undefined, message: `글자 ${items.length}자 저장${parts.length > 1 ? ` (${i + 1}/${parts.length})` : ""}` },
+      body: { files: parts[i], replaceAll: replaceAll && last, keepNames: replaceAll && last ? names : undefined, message: `글자 ${items.length}자 저장${parts.length > 1 ? ` (${i + 1}/${parts.length})` : ""}` },
     });
     done += parts[i].length;
     onProgress?.(done, items.length);

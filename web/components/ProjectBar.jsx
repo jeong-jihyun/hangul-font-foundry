@@ -43,7 +43,7 @@ export function ProjectBar({ auth, projects, current, onSelect, onCreate, onRena
 
   const act = async (fn, msg) => {
     setBusy(true);
-    try { await fn(); toast(msg); setMode(null); setName(""); }
+    try { await fn(); toast(msg); setMode(null); setName(""); setOpen(false); }
     catch (e) { toast(e.message || "처리하지 못했습니다."); }
     finally { setBusy(false); }
   };

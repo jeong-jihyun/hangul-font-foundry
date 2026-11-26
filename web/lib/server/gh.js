@@ -121,18 +121,20 @@ export async function deleteFont(id) {
 
 // 글자 저장: files=[{name,svg}]. replaceAll 이면 새 묶음에 없는 예전 글자는 지운다 (새 zip 을 올린 경우)
 export async function saveGlyphs(id, files, { replaceAll = false, keepNames = null, message } = {}) {
-  const good = files.filter((f) => GLYPH.test(f.name) && typeof f.svg === "string" && f.svg.length <= 1_000_000);
+  // 글자 파일만, 1MB 이하, 스크립트·외부 연결이 섞인 파일은 저장하지 않음
+  const danger = /<script|<foreignObject|\son\w+\s*=|javascript:|<iframe|<!ENTITY/i;
+  const good = files.filter((f) => GLYPH.test(f.name) && typeof f.svg === "string" && f.svg.length <= 1_000_000 && /<svg[\s>]/i.test(f.svg) && !danger.test(f.svg));
   const entries = good.map((f) => ({ path: `${id}/glyphs/${f.name}`, mode: "100644", type: "blob", content: f.svg }));
   if (replaceAll) {
     // 여러 번에 나눠 보낼 때는 마지막 묶음에 '전체 글자 이름'(keepNames)을 함께 보내 그때 지운다
     const keep = new Set((keepNames || good.map((f) => f.name)).map((n) => `${id}/glyphs/${n}`));
     for (const p of await pathsUnder(`${id}/glyphs/`)) if (!keep.has(p)) entries.push({ path: p, mode: "100644", type: "blob", sha: null });
   }
-  if (!entries.length) return { saved: 0 };
+  if (!entries.length) return { saved: 0, skipped: files.length };
   const f = await readFontJson(id);
   if (f) entries.push({ path: `${id}/font.json`, mode: "100644", type: "blob", content: JSON.stringify({ ...f.data, updatedAt: new Date().toISOString() }, null, 2) });
   await commitTree(entries, message || `글자 ${good.length}자 저장`);
-  return { saved: good.length };
+  return { saved: good.length, skipped: files.length - good.length };
 }
 
 // 저장된 글자를 zip 으로 (저장소 전체 zip 을 받아 이 폰트 폴더만 골라냄)

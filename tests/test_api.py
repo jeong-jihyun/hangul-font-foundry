@@ -180,3 +180,15 @@ def test_remove_bad_file():
     chk = c.post("/api/v1/checks", json={"glyphSetId": g}).json()
     assert all(i["fileName"] != "가나.svg" for i in chk["issues"])
     assert c.delete(f"/api/v1/glyphsets/{g}/files/../x").status_code == 404
+
+
+def test_build_uses_per_font_widths():  # 10단계: 폰트마다 글자 너비
+    from fontTools.ttLib import TTFont
+    import io
+    b = _wait(c.post("/api/v1/builds", json={"glyphSetId": _gid("good"), "allowMissing": True, "familyName": "넓은글꼴",
+                                             "advanceHangul": 1100, "advanceSpace": 250}).json()["buildId"])
+    assert b["status"] == "succeeded"
+    ttf = [a for a in b["artifacts"] if a["name"].endswith(".ttf")][0]
+    f = TTFont(io.BytesIO(c.get(f"/api/v1/artifacts/{ttf['artifactId']}/download").content))
+    assert f["hmtx"]["uniAC00"][0] == 1100
+    assert c.post("/api/v1/builds", json={"glyphSetId": _gid("good"), "advanceHangul": 50}).status_code in (400, 422)

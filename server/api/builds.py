@@ -47,6 +47,10 @@ class BuildRequest(BaseModel):
     allowMissing: bool = False
     familyName: str | None = Field(default=None, max_length=40)
     previewText: str | None = Field(default=None, max_length=80)
+    # 10단계: 폰트마다 글자 너비(1000칸 기준). 너무 좁거나 넓으면 거절
+    advanceHangul: int | None = Field(default=None, ge=500, le=1500)
+    advanceOther: int | None = Field(default=None, ge=200, le=1500)
+    advanceSpace: int | None = Field(default=None, ge=100, le=1000)
 
 
 class Cancelled(Exception):
@@ -106,6 +110,9 @@ def _run(bid):
             cfg["family_name"] = b["_req"]["familyName"]
         if b["_req"]["previewText"]:
             cfg["sample_sentence"] = b["_req"]["previewText"]
+        for k, ck in (("advanceHangul", "advance_hangul"), ("advanceOther", "advance_other"), ("advanceSpace", "advance_space")):
+            if b["_req"].get(k):
+                cfg[ck] = b["_req"][k]
         out = b["_dir"]
         os.makedirs(out, exist_ok=True)
 
@@ -207,7 +214,8 @@ def create_build(req: BuildRequest, request: Request):
             "steps": [{"key": k, "label": l, "state": "waiting"} for k, l in STEPS],
             "log": [], "artifacts": [], "error": None,
             "_dir": os.path.join(BUILD_STORE, bid), "_glyphs": d, "_cancel": False, "_t": time.time(),
-            "_req": {"allowMissing": req.allowMissing, "familyName": (req.familyName or "").strip() or None, "previewText": req.previewText},
+            "_req": {"allowMissing": req.allowMissing, "familyName": (req.familyName or "").strip() or None, "previewText": req.previewText,
+                     "advanceHangul": req.advanceHangul, "advanceOther": req.advanceOther, "advanceSpace": req.advanceSpace},
         }
     threading.Thread(target=_run, args=(bid,), daemon=True).start()
     return {"buildId": bid, "status": "queued"}

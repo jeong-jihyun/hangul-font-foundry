@@ -26,7 +26,7 @@ export default function Page() {
   const engine = useEngine();
   // 마지막 검수 결과: 글리프 탭의 완료/누락 표시에 쓰고, 새로고침해도 남도록 브라우저에 저장
   const [check, setCheckState] = useState(null);
-  // ---- 8단계: 비밀번호(PIN) 잠금 + 폰트 프로젝트 (Vercel 보관함) ----
+  // ---- 비밀번호(PIN) 잠금 + 폰트 프로젝트 (GitHub 비공개 저장소) ----
   const auth = useSession();
   const uid = auth.status === "in" ? "owner" : null;
   const [projects, setProjects] = useState([]);
@@ -94,13 +94,13 @@ export default function Page() {
   };
 
   // 검수에 새 zip 을 썼으면 그 글자를 GitHub 폰트 폴더에 저장 (커밋)
-  const onZipChecked = async (file) => {
+  const onZipChecked = async (file, { replaceAll = false } = {}) => {
     if (!uid || !pidRef.current) return;
     const id = pidRef.current;
     try {
       const items = await svgsFromZip(file);
       setSaving(`GitHub에 저장 중 0/${items.length}`);
-      await saveAllGlyphs(id, items, (d, t) => setSaving(`GitHub에 저장 중 ${d}/${t}`));
+      await saveAllGlyphs(id, items, (d, t) => setSaving(`GitHub에 저장 중 ${d}/${t}`), { replaceAll });
       zipMemory.loader = () => loadProjectZip(id, current?.name);
       await refresh();
       toast(`글자 ${items.length}자를 '${current?.name || "폰트"}'에 저장했어요`);
@@ -130,8 +130,8 @@ export default function Page() {
   const onFileRemoved = () => {};
 
   // 검수에 쓴 글자로 바로 만들기 (zip 을 다시 고를 필요 없음)
-  const startBuild = async ({ familyName, allowMissing }) => {
-    const body = (gid) => ({ projectId: "prj_0009", glyphSetId: gid, allowMissing, familyName, previewText: settings.preview });
+  const startBuild = async ({ familyName, allowMissing, widths = {} }) => {
+    const body = (gid) => ({ projectId: "prj_0009", glyphSetId: gid, allowMissing, familyName, previewText: settings.preview, ...widths });
     let gid = (zipMemory.file || zipMemory.loader) ? await ensureGlyphSet(zipMemory.file) : check?.glyphSetId;
     if (!gid) throw new Error("먼저 검수 탭에서 글리프 zip을 올려 주세요.");
     let r;
@@ -184,6 +184,18 @@ export default function Page() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  // 홈 등에서 '그리기' → 글리프 탭으로 가서 그 글자(또는 다음 빈 글자)를 편집기로 연다
+  const openEditor = (target) => {
+    try { sessionStorage.setItem("glyphroom-open-editor", target); } catch {}
+    go("glyphs");
+  };
+  // 폰트별 설정 (이름·글자 너비): 잠금 열림 → GitHub font.json, 잠김 → 이 기기
+  const fontSettings = (uid && current ? current.settings : localGet("glyphroom-local-font-settings")) || {};
+  const saveFontSettings = async (st) => {
+    if (uid && pidRef.current) { await updateProject(pidRef.current, { settings: st }); await refresh(); }
+    else localSet("glyphroom-local-font-settings", st);
+  };
+
   const toast = useCallback((s) => {
     setMsg(s);
     clearTimeout(timer.current);
@@ -212,7 +224,7 @@ export default function Page() {
         <aside className="sidebar">
           <div className="workspace-label">WORKSPACE</div>
           <nav className="nav" aria-label="주요 메뉴">{navButtons(false)}</nav>
-          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 9<br />Made for type creators.</div>
+          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · v1.0<br />Made for type creators.</div>
         </aside>
         <main className="main">
           <ProjectBar auth={auth} projects={projects} current={current} saving={saving} toast={toast}
@@ -221,10 +233,11 @@ export default function Page() {
             onCreate={async (name) => { const p = await createProject(name); const l = await refresh(); openProject(p.id, l); }}
             onRename={async (id, name) => { await updateProject(id, { name }); await refresh(); }}
             onDelete={async (id) => { await deleteProject(id); let l = await refresh(); if (!l.length) { await createProject("나의 첫 폰트"); l = await refresh(); } openProject(l[0].id, l); }} />
-          {tab === "home" && <HomeScreen go={go} check={check} build={build} engine={engine} />}
+          {tab === "home" && <HomeScreen go={go} check={check} build={build} engine={engine} openEditor={openEditor} saved={current?.glyphCount || 0} fontName={current?.name} />}
           {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onGlyphReplaced={onGlyphReplaced} saveToStore={saveToStore} loggedIn={!!uid} />}
-          {tab === "check" && <CheckScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onZipChecked={onZipChecked} onFileRemoved={onFileRemoved} />}
-          {tab === "build" && ready && <BuildScreen settings={settings} engine={engine} check={check} go={go} build={build} startBuild={startBuild} cancelBuild={cancelBuild} />}
+          {tab === "check" && <CheckScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onZipChecked={onZipChecked} onFileRemoved={onFileRemoved} openEditor={openEditor} />}
+          {tab === "build" && ready && <BuildScreen settings={settings} engine={engine} check={check} go={go} build={build} startBuild={startBuild} cancelBuild={cancelBuild}
+            fontSettings={fontSettings} saveFontSettings={saveFontSettings} fontName={current?.name} openEditor={openEditor} />}
           {tab === "settings" && ready && <SettingsScreen toast={toast} settings={settings} saveSettings={saveSettings} engine={engine} />}
         </main>
       </div>

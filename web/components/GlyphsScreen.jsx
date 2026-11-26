@@ -124,6 +124,19 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplac
   useEffect(() => setSheet(false), [group, q, st]);
   const sel = selected || list[0] || items[0];
 
+  // 홈에서 '그리기'로 들어온 경우: 그 글자(또는 아직 없는 첫 글자)를 바로 편집기로 연다
+  useEffect(() => {
+    if (!live) return;
+    let want = null;
+    try { want = sessionStorage.getItem("glyphroom-open-editor"); sessionStorage.removeItem("glyphroom-open-editor"); } catch {}
+    if (!want) return;
+    const g = want === "next"
+      ? items.find((i) => i.group === "hangul" && !(check && isMine(i.char))) || items[0]
+      : items.find((i) => i.char === want);
+    if (g) { setSelected(g); setEditing(g); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live]);
+
   // 편집기에서 저장: ① GitHub(잠금 열림) ② 엔진에 올려 바로 다시 검수 → 글리프·빌드 탭에 반영
   const saveFromEditor = async (name, svg) => {
     const file = new File([svg], name, { type: "image/svg+xml" });

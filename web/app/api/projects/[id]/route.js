@@ -11,7 +11,10 @@ export async function PATCH(req, { params }) {
   const body = await req.json().catch(() => ({}));
   const patch = {};
   if (typeof body.name === "string" && body.name.trim()) patch.name = body.name.trim().slice(0, 40);
-  if (body.settings && typeof body.settings === "object") patch.settings = body.settings;
+  if (body.settings && typeof body.settings === "object" && !Array.isArray(body.settings)) {
+    if (JSON.stringify(body.settings).length > 4000) return json({ error: { code: "VALIDATION_ERROR", message: "설정이 너무 큽니다." } }, 400);
+    patch.settings = body.settings;
+  }
   try { const r = await updateFont(id, patch); return r ? json(r) : nf(); }
   catch { return json({ error: { code: "STORE_ERROR", message: "GitHub에 저장하지 못했습니다." } }, 502); }
 }

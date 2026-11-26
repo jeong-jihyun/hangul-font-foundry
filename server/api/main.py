@@ -17,7 +17,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import hangul_font_kit
 
-API_VERSION = "0.6.0"
+API_VERSION = "1.0.0"
 STARTED_AT = datetime.now(timezone.utc)
 
 app = FastAPI(title="Glyphroom API", version=API_VERSION, docs_url="/api/v1/docs", openapi_url="/api/v1/openapi.json")

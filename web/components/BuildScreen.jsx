@@ -93,8 +93,16 @@ function Progress({ build, secs, onCancel, go }) {
   );
 }
 
-export function BuildScreen({ settings, engine, check, go, build, startBuild, cancelBuild }) {
-  const [name, setName] = useState(settings.name);
+const W = { advanceHangul: 1000, advanceOther: 600, advanceSpace: 300 };
+const WR = { advanceHangul: [500, 1500, "한글 글자 너비"], advanceOther: [200, 1500, "숫자·영문·기호 너비"], advanceSpace: [100, 1000, "띄어쓰기 너비"] };
+
+export function BuildScreen({ settings, engine, check, go, build, startBuild, cancelBuild, fontSettings = {}, saveFontSettings, fontName, openEditor }) {
+  // 폰트마다 이름·글자 너비를 기억 (잠금 열림 → GitHub, 잠김 → 이 기기)
+  const [name, setName] = useState(fontSettings.familyName || fontName || settings.name);
+  const [widths, setWidths] = useState({ ...W, ...(fontSettings.widths || {}) });
+  useEffect(() => { setName(fontSettings.familyName || fontName || settings.name); setWidths({ ...W, ...(fontSettings.widths || {}) }); },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fontName, JSON.stringify(fontSettings)]);
   const [nameErr, setNameErr] = useState("");
   const [starting, setStarting] = useState(false);
   const [runErr, setRunErr] = useState("");
@@ -111,8 +119,17 @@ export function BuildScreen({ settings, engine, check, go, build, startBuild, ca
 
   const start = async (allowMissing) => {
     if (!name.trim()) { setNameErr("글꼴 이름을 입력해 주세요."); return; }
+    for (const [k, [lo, hi, label]] of Object.entries(WR)) {
+      const v = Number(widths[k]);
+      if (!Number.isFinite(v) || v < lo || v > hi) { setRunErr(`${label}는 ${lo}~${hi} 사이로 넣어 주세요.`); return; }
+    }
     setNameErr(""); setRunErr(""); setStarting(true);
-    try { await startBuild({ familyName: name.trim(), allowMissing }); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    try {
+      const w = Object.fromEntries(Object.entries(widths).map(([k, v]) => [k, Math.round(Number(v))]));
+      saveFontSettings?.({ ...fontSettings, familyName: name.trim(), widths: w }).catch?.(() => {});
+      await startBuild({ familyName: name.trim(), allowMissing, widths: w });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
     catch (e) { setRunErr(e.message + (e.requestId ? ` (요청 번호 ${e.requestId})` : "")); }
     finally { setStarting(false); }
   };
@@ -143,19 +160,33 @@ export function BuildScreen({ settings, engine, check, go, build, startBuild, ca
       <Card title={ok ? "다시 만들기" : "만들기"} aside={<span className="badge">CONFIG</span>}>
         {!s ? (
           <>
-            <Result show tone="warning"><strong>△ 먼저 글자를 올려 검수해 주세요.</strong>검수 탭에서 글리프 zip을 한 번 올리면, 여기서는 다시 고를 필요 없이 바로 만들 수 있습니다.</Result>
-            <Button onClick={() => go("check")}>검수 탭으로 가기 →</Button>
+            <Result show tone="warning"><strong>△ 먼저 글자를 그리거나 올려 주세요.</strong>글리프 탭에서 글자를 그려 저장하면 자동으로 검수되고, 여기서 바로 만들 수 있습니다. 이미 저장한 글자가 있으면 검수 탭에서 '검수 실행'을 한 번 눌러 주세요.</Result>
+            <div className="row-gap">
+              <Button onClick={() => openEditor ? openEditor("next") : go("glyphs")}>글자 그리러 가기 →</Button>
+              <Button variant="light" onClick={() => go("check")}>검수 탭 (zip·저장된 글자)</Button>
+            </div>
           </>
         ) : (
           <>
             <div className="usebox">
               <b>사용할 글자: {check.fileName}</b>
               <small>✓ 준비 {s.passed}자 · {s.errors ? `✕ 고칠 곳 ${s.errors}건 · ` : ""}△ 아직 없는 필수 글자 {missing.toLocaleString()}자</small>
-              <button className="linkbtn" onClick={() => go("check")}>다른 zip 쓰기 →</button>
+              <button className="linkbtn" onClick={() => go("glyphs")}>글자 더 그리기·고치기 →</button>
             </div>
             <Field id="fontName" label="글꼴 이름" help="한글도 됩니다. 파일 이름은 영문·숫자만 남겨 만듭니다." error={nameErr}>
               <input id="fontName" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} />
             </Field>
+            <details className="more">
+              <summary>글자 너비 (이 폰트에 저장)</summary>
+              <div className="formgrid">
+                {Object.entries(WR).map(([k, [lo, hi, label]]) => (
+                  <Field key={k} id={k} label={label} help={`${lo}~${hi} · 기본 ${W[k]}`}>
+                    <input id={k} type="number" inputMode="numeric" min={lo} max={hi} value={widths[k]} onChange={(e) => setWidths({ ...widths, [k]: e.target.value })} />
+                  </Field>
+                ))}
+              </div>
+              <p className="muted" style={{ margin: 0 }}>글자 칸 1000 기준입니다. 한글 너비를 줄이면 글자 사이가 좁아집니다. 폰트를 만들 때 이 폰트의 설정으로 함께 저장됩니다.</p>
+            </details>
             {runErr && <Result show tone="error"><strong>✕ 시작하지 못했습니다.</strong>{runErr}</Result>}
             {s.errors > 0 ? (
               <>
