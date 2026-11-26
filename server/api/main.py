@@ -115,3 +115,7 @@ app.include_router(glyphs_router)
 from .builds import router as builds_router  # noqa: E402
 
 app.include_router(builds_router)
+
+from .handwriting import router as handwriting_router  # noqa: E402
+
+app.include_router(handwriting_router)

@@ -154,3 +154,39 @@ export async function fontZip(id) {
 
 export const repoUrl = (id) => `https://github.com/${REPO}/tree/${BRANCH}/${id || ""}`;
 export { strToU8 };
+
+// ---- 손글씨 자모 조각: {id}/jamo/L00V0.svg ----
+const JAMO = /^(L\d{2}[VHM][01]|V\d{2}[01]|T\d{2}[VHM])$/;
+const SAFE_D = /^[MLCZ0-9 .,\-]*$/;
+export async function saveJamo(id, items) {
+  const good = items.filter((x) => JAMO.test(x.key) && typeof x.d === "string" && x.d.length <= 200_000 && SAFE_D.test(x.d));
+  const del = items.filter((x) => JAMO.test(x.key) && x.d === null);
+  const entries = [
+    ...good.map((x) => ({ path: `${id}/jamo/${x.key}.svg`, mode: "100644", type: "blob", content: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000"><path d="${x.d}"/></svg>\n` })),
+    ...del.map((x) => ({ path: `${id}/jamo/${x.key}.svg`, mode: "100644", type: "blob", sha: null })),
+  ];
+  if (!entries.length) return { saved: 0 };
+  // 지우려는 파일이 없으면 git 이 오류를 내므로 있는 것만
+  if (del.length) {
+    const have = new Set(await pathsUnder(`${id}/jamo/`));
+    for (let i = entries.length - 1; i >= 0; i--) if (entries[i].sha === null && !have.has(entries[i].path)) entries.splice(i, 1);
+  }
+  if (entries.length) await commitTree(entries, `손글씨 조각 ${good.length}개 저장${del.length ? ` · ${del.length}개 지움` : ""}`);
+  return { saved: good.length };
+}
+export async function loadJamo(id) {
+  await headSha();
+  const res = await gh(`/zipball/${BRANCH}`, { raw: true });
+  if (!res.ok) throw new Error("손글씨 조각을 받지 못했습니다.");
+  const all = unzipSync(new Uint8Array(await res.arrayBuffer()));
+  const out = {};
+  for (const [path, data] of Object.entries(all)) {
+    const parts = path.split("/");
+    if (parts[1] === id && parts[2] === "jamo" && /\.svg$/.test(parts[3] || "")) {
+      const key = parts[3].slice(0, -4);
+      const m = /\sd="([^"]*)"/.exec(Buffer.from(data).toString("utf8"));
+      if (JAMO.test(key) && m) out[key] = m[1];
+    }
+  }
+  return out;
+}

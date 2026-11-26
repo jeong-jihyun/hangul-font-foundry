@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/normalize.test.mjs tests/overlap.test.mjs"
+    "test": "node --test tests/normalize.test.mjs tests/overlap.test.mjs tests/hangul.test.mjs"
   },
   "dependencies": {
     "fflate": "^0.8.3",

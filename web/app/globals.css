@@ -147,3 +147,10 @@ details.log summary,details.more summary{cursor:pointer;font-size:12px;font-weig
 @media(min-width:900px){.editor{left:50%;transform:translateX(-50%);max-width:1100px;border-left:1px solid var(--line);border-right:1px solid var(--line)}}
 .svgedit-modal{position:fixed;inset:0;z-index:70;background:var(--paper);display:flex;flex-direction:column}.svgedit-frame{flex:1;border:0;width:100%;background:#fff}
 @media(min-width:900px){.editor{box-shadow:0 0 0 100vmax rgba(32,34,31,.45)}}
+/* ---- 손글씨 화면 ---- */
+.hw-pages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:10px}.hw-page{border:1px solid var(--line);background:#fff;border-radius:12px;padding:8px 2px;min-height:var(--tap)}.hw-page b{display:block;font-size:12px}.hw-page small{font-size:10px;color:var(--muted)}.hw-page.on{border-color:var(--accent);background:#fff9f6}.hw-page.done small{color:var(--green)}
+.hw-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}.hw-cell{border:1px solid var(--line);background:#fff;border-radius:10px;padding:5px 2px 4px;display:grid;justify-items:center;gap:2px;min-height:var(--tap)}.hw-cell small{font-size:10px;color:var(--muted);white-space:nowrap}.hw-cell.st-ok{border-color:#bcd6be}.hw-cell.st-faint,.hw-cell.st-messy{border-color:#e7c48f;background:#fffaf0}.hw-cell.on{border-color:var(--accent);box-shadow:0 0 0 2px #d85d3f33}
+.hw-piece{display:block;fill:var(--ink)}.hw-blank{display:block;border:1px dashed #d9d5cb;border-radius:6px}
+.hw-act{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding:10px;background:#f4f1eb;border-radius:12px}.hw-act b{font-size:13px;margin-right:auto}
+.hw-preview{display:flex;flex-wrap:wrap;align-items:flex-end;gap:2px;min-height:60px;padding:10px;background:#fff;border:1px solid var(--line);border-radius:12px}.hw-space{width:16px}.hw-miss{width:46px;height:46px;display:grid;place-items:center;font-size:26px;color:#cfcac0;border:1px dashed #e2ded5;border-radius:6px}
+@media(max-width:650px){.mobilebar{grid-template-columns:repeat(6,1fr)}.hw-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.hw-pages{grid-template-columns:repeat(3,minmax(0,1fr))}}

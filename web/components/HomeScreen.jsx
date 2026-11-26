@@ -11,13 +11,13 @@ function plan(check, build, saved) {
   const built = build?.status === "succeeded";
   const building = build && (build.status === "queued" || build.status === "running");
   const steps = [
-    { n: 1, t: "글자 그리기", d: drawn ? `그린 글자 ${drawn.toLocaleString()}자 · 글리프 탭에서 글자를 눌러 그리기` : "글리프 탭에서 글자를 누르고 '그리기' (zip 올리기도 됨)", done: drawn > 0 },
+    { n: 1, t: "글자 만들기", d: drawn ? `준비된 글자 ${drawn.toLocaleString()}자` : "손글씨 종이 사진 → 자동 조합 (또는 앱에서 직접 그리기)", done: drawn > 0 },
     { n: 2, t: "고칠 곳 고치기", d: s ? (s.errors ? `고칠 곳 ${s.errors}건` : "고칠 곳 없음 (저장할 때마다 자동 검수)") : "저장하면 자동으로 검수", done: !!s && s.errors === 0 },
     { n: 3, t: "폰트 만들기", d: building ? "만드는 중…" : built ? `${build.familyName} · ${build.glyphCount}자${build.allowMissing ? " (시험용)" : ""}` : "그린 글자로 TTF·견본 만들기", done: built },
     { n: 4, t: "받기·써 보기", d: built ? "폰트 파일 받기, 문장 써 보기" : "만든 폰트 설치·확인", done: false },
   ];
   let next;
-  if (!s && !saved) next = { title: "첫 글자 '가'를 그려 보세요", desc: "펜이나 사각형으로 그리고 저장하면 끝이에요. 다른 프로그램도, 파일 이름도, zip도 필요 없어요.", btn: "'가' 그리기", act: { edit: "가" }, step: 1 };
+  if (!s && !saved) next = { title: "손글씨 종이 1장부터 써 보세요", desc: "종이를 인쇄해 검은 펜으로 자음·모음을 쓰고 사진을 올리면, 1장만으로 192자(가·개·거·나…)가 바로 만들어져요. 6장이면 2,350자예요.", btn: "손글씨로 시작", to: "handwriting", alt: { btn: "앱에서 직접 그리기", act: { edit: "가" } }, step: 1 };
   else if (!s && saved) next = { title: `저장된 글자 ${saved.toLocaleString()}자가 있어요`, desc: "이어서 그리거나, 검수 탭에서 '검수 실행'을 누르면 저장된 글자를 불러와 바로 폰트를 만들 수 있어요.", btn: "다음 글자 그리기", act: { edit: "next" }, alt: { btn: "저장된 글자 검수", to: "check" }, step: 1 };
   else if (s.errors) next = { title: `고칠 곳 ${s.errors}건이 있어요`, desc: "문제 목록에서 이유를 보고, 그 글자를 편집기로 열어 고치거나 자동 정리된 파일로 다시 올리세요.", btn: "고칠 곳 보기", to: "check", step: 2 };
   else if (building) next = { title: "폰트를 만드는 중이에요", desc: "보통 수십 초면 끝나요. 진행 상황을 볼 수 있어요.", btn: "진행 상황 보기", to: "build", step: 3 };

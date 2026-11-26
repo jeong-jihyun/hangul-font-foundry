@@ -1,6 +1,7 @@
 // 화면 목록 (데스크톱 좌측 메뉴 · 모바일 하단 탭 공용)
 export const TABS = [
   { id: "home", ico: "⌂", label: "Overview", short: "홈" },
+  { id: "handwriting", ico: "✍", label: "Handwriting", short: "손글씨" },
   { id: "glyphs", ico: "▦", label: "Glyph library", short: "글리프" },
   { id: "check", ico: "✓", label: "Quality check", short: "검수" },
   { id: "build", ico: "↗", label: "Font export", short: "빌드" },

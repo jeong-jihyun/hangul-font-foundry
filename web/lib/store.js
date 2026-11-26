@@ -84,3 +84,13 @@ export async function loadProjectZip(id, name) {
 export const localGet = (k) => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
 export const localSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
 export const slimCheck = (c) => (c ? { ...c, issues: (c.issues || []).slice(0, 300) } : null);
+
+// ---- 손글씨 자모 조각 (잠금 열림 → GitHub, 잠김 → 이 기기) ----
+export async function loadJamo(id) {
+  if (id) return (await call(`/api/projects/${id}/jamo`)).jamo || {};
+  return localGet("glyphroom-local-jamo") || {};
+}
+export async function saveJamo(id, items, all) {
+  if (id) await call(`/api/projects/${id}/jamo`, { method: "POST", body: { items } });
+  else localSet("glyphroom-local-jamo", all);
+}

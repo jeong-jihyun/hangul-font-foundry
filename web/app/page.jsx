@@ -4,7 +4,8 @@ import { TABS, SETTINGS_KEY, DEFAULT_SETTINGS } from "../components/data";
 import { DemoBadge } from "../components/ui";
 import { useEngine, api } from "../lib/api";
 import { GlyphsScreen } from "../components/GlyphsScreen";
-import { CheckScreen, zipMemory, ensureGlyphSet } from "../components/CheckScreen";
+import { CheckScreen, zipMemory, ensureGlyphSet, mergeWithExisting } from "../components/CheckScreen";
+import { HandwritingScreen } from "../components/HandwritingScreen";
 import { HomeScreen } from "../components/HomeScreen";
 import { ProjectBar } from "../components/ProjectBar";
 import {
@@ -184,6 +185,15 @@ export default function Page() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  // 손글씨 조합 등으로 만든 글자 묶음을 지금 폰트에 넣기: 기존 글자에 합치고 → 검수 → GitHub 저장(합치기)
+  const applyGlyphZip = async (file, label) => {
+    const has = zipMemory.file || zipMemory.loader || Object.keys(zipMemory.replacements).length;
+    const use = has ? (await mergeWithExisting(file)).file : file;
+    const gid = await ensureGlyphSet(use);
+    const r = await api("/checks", { method: "POST", body: { projectId: "prj_0009", glyphSetId: gid } });
+    setCheck({ ...r, fileName: label, checkedAt: new Date().toISOString() });
+    if (uid && pidRef.current) await onZipChecked(file, {});
+  };
   // 홈 등에서 '그리기' → 글리프 탭으로 가서 그 글자(또는 다음 빈 글자)를 편집기로 연다
   const openEditor = (target) => {
     try { sessionStorage.setItem("glyphroom-open-editor", target); } catch {}
@@ -234,6 +244,7 @@ export default function Page() {
             onRename={async (id, name) => { await updateProject(id, { name }); await refresh(); }}
             onDelete={async (id) => { await deleteProject(id); let l = await refresh(); if (!l.length) { await createProject("나의 첫 폰트"); l = await refresh(); } openProject(l[0].id, l); }} />
           {tab === "home" && <HomeScreen go={go} check={check} build={build} engine={engine} openEditor={openEditor} saved={current?.glyphCount || 0} fontName={current?.name} />}
+          {tab === "handwriting" && <HandwritingScreen engine={engine} toast={toast} go={go} projectId={uid ? pid : null} applyGlyphZip={applyGlyphZip} />}
           {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onGlyphReplaced={onGlyphReplaced} saveToStore={saveToStore} loggedIn={!!uid} />}
           {tab === "check" && <CheckScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onZipChecked={onZipChecked} onFileRemoved={onFileRemoved} openEditor={openEditor} />}
           {tab === "build" && ready && <BuildScreen settings={settings} engine={engine} check={check} go={go} build={build} startBuild={startBuild} cancelBuild={cancelBuild}

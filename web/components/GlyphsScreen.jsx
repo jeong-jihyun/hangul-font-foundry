@@ -30,7 +30,7 @@ const GROUP_LABEL = { hangul: "한글 완성형", digit: "숫자", latin: "영�
 // 화면을 옮겨 다녀도 다시 받지 않도록 한 번 받은 목록을 기억해 둔다
 let cache = null;
 
-function useCharset(engineStatus) {
+export function useCharset(engineStatus) {
   const [state, setState] = useState(cache ? { status: "ready", ...cache } : { status: "loading" });
   const load = async () => {
     setState({ status: "loading" });
