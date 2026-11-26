@@ -256,10 +256,19 @@ export function reverseSub(s) {
 // 겹친 정도(몇 겹 안에 들어 있는지)로 바깥/구멍을 정한다 → evenodd 로 그린 파일도 모양 그대로 유지
 export function orient(subs) {
   const polys = subs.map((s) => flatten(s));
+  const areas = polys.map((p) => Math.abs(area(p)));
+  // 윤곽 전체(여러 점)가 다른 윤곽 안에 들어 있을 때만 '그 안에 있다'고 본다.
+  // 시작점 하나만 보면, 겹쳐 그린 획(ㅍ의 세로획처럼 가로획 위에서 시작)을 구멍으로 잘못 뒤집는다.
+  const within = (i, j) => {
+    const p = polys[i];
+    const step = Math.max(1, Math.floor(p.length / 16));
+    let n = 0, hit = 0;
+    for (let k = 0; k < p.length; k += step) { n++; if (inside(p[k], polys[j])) hit++; }
+    return hit === n;
+  };
   return subs.map((s, i) => {
-    const probe = polys[i][0];
     let depth = 0;
-    subs.forEach((_, j) => { if (j !== i && Math.abs(area(polys[j])) > Math.abs(area(polys[i])) && inside(probe, polys[j])) depth++; });
+    subs.forEach((_, j) => { if (j !== i && areas[j] > areas[i] && within(i, j)) depth++; });
     const a = area(polys[i]);
     const wantNeg = depth % 2 === 0; // 바깥선 → 넓이(화면 좌표) 음수
     return (a < 0) === wantNeg ? s : reverseSub(s);

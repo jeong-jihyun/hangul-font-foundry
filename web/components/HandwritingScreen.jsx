@@ -6,6 +6,7 @@ import { api } from "../lib/api";
 import { PageHead, Card, Button, Result, Notice, StatusChip } from "./ui";
 import { GlyphEditor } from "./GlyphEditor";
 import { composeD, partsFor, fileName } from "../lib/glyph/hangul";
+import { baseJamo } from "../lib/glyph/basejamo";
 import { glyphSvg } from "../lib/glyph/geom";
 import { loadJamo, saveJamo } from "../lib/store";
 import { useCharset } from "./GlyphsScreen";
@@ -30,7 +31,7 @@ function Piece({ d, size = 44 }) {
     : <span className="hw-blank" style={{ width: size, height: size }} />;
 }
 
-export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip }) {
+export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip, customGlyphs = [] }) {
   const cs = useCharset(engine.status);
   const required = useMemo(() => (cs.items || []).map((i) => i.char), [cs.items]);
   const [layout, setLayout] = useState(layoutCache);
@@ -102,26 +103,58 @@ export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip 
   const hangul = useMemo(() => required.filter((ch) => partsFor(ch)), [required]);
   const ready = useMemo(() => hangul.filter((ch) => partsFor(ch).every((k) => jamo[k])), [hangul, jamo]);
 
-  const applyAll = async () => {
-    if (!ready.length) return;
+  // 조합해서 폰트 글자로 넣기. 글자 탭에서 한 글자씩 직접 고친 글자는 덮어쓰지 않는다
+  const applyAll = async (src = jamo, label = "조합") => {
+    const keep = new Set(customGlyphs);
+    const chars = hangul.filter((ch) => partsFor(ch).every((k) => src[k]) && !keep.has(fileName(ch)));
+    if (!chars.length) return;
     setApplying(true);
     try {
+      setBusy(`${chars.length.toLocaleString()}자 조합 중…`);
       const files = {};
-      for (const ch of ready) { const d = composeD(ch, jamo); if (d) files[fileName(ch)] = strToU8(glyphSvg(d)); }
-      const zip = new File([zipSync(files, { level: 6 })], "손글씨 조합.zip", { type: "application/zip" });
-      await applyGlyphZip(zip, `손글씨 조합 ${Object.keys(files).length}자`);
-      toast(`손글씨로 ${Object.keys(files).length}자를 만들어 넣었어요`);
+      for (const ch of chars) { const d = composeD(ch, src); if (d) files[fileName(ch)] = strToU8(glyphSvg(d)); }
+      const zip = new File([zipSync(files, { level: 6 })], `${label}.zip`, { type: "application/zip" });
+      setBusy("검수하고 저장하는 중… (1분 정도)");
+      await applyGlyphZip(zip, `${label} ${Object.keys(files).length}자`);
+      toast(`${Object.keys(files).length.toLocaleString()}자를 만들어 넣었어요${keep.size ? ` · 직접 고친 ${keep.size}자는 그대로` : ""}`);
     } catch (e) { toast(e.message || "넣지 못했습니다."); }
-    finally { setApplying(false); }
+    finally { setApplying(false); setBusy(""); }
   };
+
+  // 기초 도안: 앱이 만든 고딕 획 조각으로 채우고 바로 2,350자 조합
+  const fillBase = async (all) => {
+    const base = baseJamo();
+    const next = all ? { ...base } : { ...base, ...jamo };
+    const items = Object.entries(next).filter(([k, d]) => all || !jamo[k]).map(([key, d]) => ({ key, d }));
+    setBusy("기초 도안 조각 저장 중…");
+    await store(items, next);
+    await applyAll(next, "기초 도안");
+  };
+  // 홈에서 '기초 도안으로 채우기'로 들어온 경우 바로 실행
+  useEffect(() => {
+    if (loading || !hangul.length || applying) return;
+    let want = null;
+    try { want = sessionStorage.getItem("glyphroom-base"); sessionStorage.removeItem("glyphroom-base"); } catch {}
+    if (want) fillBase(want === "all");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, hangul.length]);
 
   const cur = sel && cellsOf(page).find((c) => c.key === sel);
 
   return (
     <section className="screen active" id="handwriting">
-      <PageHead title="손글씨로 만들기" desc="종이에 자음·모음을 쓰고 사진을 올리면, 2,350자를 자동으로 맞춰 만듭니다." badge={`${doneAll}/${total}칸`} />
+      <PageHead title="도안·손글씨" desc="자음·모음 조각 237개로 2,350자를 자동으로 맞춰 만듭니다. 조각은 기초 도안·손글씨 사진·편집기로 채웁니다." badge={`${doneAll}/${total}칸`} />
 
-      <Card title="1. 종이 받아 쓰기" aside={<span className="badge">A4 · 6장</span>}>
+      <Card title="기초 도안" aside={busy && applying ? <StatusChip status="running">{busy}</StatusChip> : null}>
+        <p className="muted" style={{ marginTop: 0 }}>앱이 만든 <b>보통 굵기 고딕 획</b>으로 조각을 채우고 2,350자를 바로 만듭니다. 그 위를 손글씨 사진이나 편집기로 고쳐 나가세요. 조각 하나를 고치면 그 조각이 들어간 글자가 모두 바뀝니다.</p>
+        <div className="row-gap">
+          <Button loading={applying} disabled={!hangul.length || engine.status !== "online"} onClick={() => fillBase(false)}>{doneAll ? "빈 조각만 기초 도안으로 채우기" : "기초 도안으로 2,350자 채우기"}</Button>
+          {doneAll > 0 && <Button variant="light" disabled={applying || !hangul.length} onClick={() => { if (window.confirm("지금 조각을 모두 기초 도안으로 바꿀까요? (손글씨로 채운 조각도 바뀝니다)")) fillBase(true); }}>모두 기초 도안으로</Button>}
+        </div>
+        {customGlyphs.length > 0 && <p className="muted" style={{ margin: "8px 0 0" }}>글자 탭에서 직접 고친 {customGlyphs.length}자는 조합할 때 그대로 둡니다.</p>}
+      </Card>
+
+      <Card title="손글씨 1. 종이 받아 쓰기" aside={<span className="badge">A4 · 6장</span>}>
         <p className="muted" style={{ marginTop: 0 }}>인쇄해서 <b>검은 펜</b>으로 진한 점선 칸에만 쓰세요. 파란 글자·선은 사진에서 지워집니다. <b>1장만 써도 192자</b>(가·개·거·기·나…), 3장이면 1,309자, 6장이면 2,350자를 만들 수 있어요.</p>
         <a className="btn fullwidth" href={PDF} target="_blank" rel="noopener" download>⇩ 손글씨 종이 PDF 받기</a>
         <div className="hw-pages" role="group" aria-label="장별 진행">
@@ -133,7 +166,7 @@ export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip 
         </div>
       </Card>
 
-      <Card title="2. 쓴 종이 사진 올리기" aside={busy ? <StatusChip status="running">{busy}</StatusChip> : null}>
+      <Card title="손글씨 2. 쓴 종이 사진 올리기" aside={busy ? <StatusChip status="running">{busy}</StatusChip> : null}>
         <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={onPhotos} />
         <Button className="fullwidth" loading={!!busy} disabled={engine.status !== "online" || !layout} onClick={() => fileRef.current?.click()}>📷 사진 고르기·찍기 (여러 장 가능)</Button>
         <p className="muted" style={{ margin: "8px 0 0" }}>종이 <b>네 귀퉁이의 검은 네모</b>가 모두 나오게, 밝은 곳에서 위에서 찍어 주세요. 몇 번째 장인지는 자동으로 알아봅니다. 같은 장을 다시 올리면 새로 쓴 칸만 바뀝니다.</p>
@@ -142,7 +175,7 @@ export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip 
         {!projectId && <p className="muted" style={{ margin: "6px 0 0" }}>잠금을 열면 따낸 글씨가 GitHub에 저장됩니다. 지금은 이 기기에만 저장됩니다.</p>}
       </Card>
 
-      <Card title={`3. ${page + 1}장에서 따낸 글씨`} aside={layout ? `${doneIn(page)}/${cellsOf(page).length}칸` : ""}>
+      <Card title={`조각 보기·고치기 (${page + 1}장 칸)`} aside={layout ? `${doneIn(page)}/${cellsOf(page).length}칸` : ""}>
         {loading ? <p className="muted">불러오는 중…</p> : !layout ? <p className="muted">{err || "칸 배치를 받는 중…"}</p> : (
           <>
             <div className="hw-grid">
@@ -169,7 +202,7 @@ export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip 
         )}
       </Card>
 
-      <Card title="4. 2,350자 자동 조합" aside={<StatusChip status={ready.length ? "success" : "neutral"}>{ready.length.toLocaleString()} / {hangul.length.toLocaleString()}자</StatusChip>}>
+      <Card title="2,350자 조합" aside={<StatusChip status={ready.length ? "success" : "neutral"}>{ready.length.toLocaleString()} / {hangul.length.toLocaleString()}자</StatusChip>}>
         <div className="hw-preview" aria-label="내 손글씨로 조합한 문장">
           {[...text].map((ch, i) => {
             if (ch === " ") return <span key={i} className="hw-space" />;
@@ -179,7 +212,7 @@ export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip 
         </div>
         <input className="search" style={{ width: "100%", marginTop: 8 }} value={text} onChange={(e) => setText(e.target.value)} maxLength={40} aria-label="미리 볼 문장" />
         <p className="muted" style={{ margin: "8px 0 0" }}>회색 글자는 아직 필요한 칸을 쓰지 않은 글자예요. 조합은 화면에 보이는 그대로 폰트가 됩니다.</p>
-        <Button className="fullwidth" loading={applying} disabled={!ready.length} onClick={applyAll}>조합한 {ready.length.toLocaleString()}자를 폰트 글자로 넣기 ↗</Button>
+        <Button className="fullwidth" loading={applying} disabled={!ready.length} onClick={() => applyAll()}>조합한 {ready.length.toLocaleString()}자를 폰트 글자로 넣기 ↗</Button>
         <p className="muted" style={{ margin: "8px 0 0" }}>넣으면 같은 글자는 새 조합으로 바뀌고, 자동으로 검수됩니다. 그다음 <button className="linkbtn" onClick={() => go("build")}>빌드 탭에서 폰트 만들기 →</button></p>
       </Card>
 

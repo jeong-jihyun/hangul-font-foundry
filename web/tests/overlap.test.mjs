@@ -29,3 +29,9 @@ test("점 줄이기: 둥근 고리는 점이 크게 줄고 넓이는 거의 같�
   const q = simplifyContour({ nodes: sq.map((p) => ({ ...p, hin: null, hout: null })) });
   assert.equal(q.nodes.length, 4); assert.ok(q.nodes.every((n) => !n.smooth));
 });
+
+test("겹친 획의 시작점이 다른 획 안에 있어도 구멍으로 뒤집지 않음 (ㅍ)", () => {
+  const top = rect(100, 100, 400, 60), vert = { nodes: [[200, 120], [240, 120], [240, 400], [200, 400]].map(([x, y]) => ({ x, y, hin: null, hout: null })) };
+  const s = orient(contoursToSubs([top, vert]));
+  assert.ok(s.every((x) => area(flatten(x)) < 0));
+});

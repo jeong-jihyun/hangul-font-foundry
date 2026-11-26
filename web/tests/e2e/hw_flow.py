@@ -24,8 +24,8 @@ with sync_playwright() as p:
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.goto(BASE); pg.wait_for_timeout(2000)
     pg.locator(".projbar.slim").click(); pg.fill("input[aria-label='비밀번호(PIN)']", os.environ.get("PIN", "123456")); pg.locator(".pinform button").click(); pg.wait_for_timeout(2500)
-    pg.locator(".mobilebar button", has_text="손글씨").click(); pg.wait_for_timeout(3500)
-    check("손글씨 탭 열림", "손글씨로 만들기" in pg.locator("#handwriting").inner_text())
+    pg.locator(".mobilebar button", has_text="도안").click(); pg.wait_for_timeout(3500)
+    check("도안·손글씨 탭 열림", "도안·손글씨" in pg.locator("#handwriting").inner_text())
     check("종이 PDF 링크", urllib.request.urlopen(BASE + "/handwriting/glyphroom-handwriting.pdf").status == 200)
     pg.locator("#handwriting input[type=file]").set_input_files(photo)
     for _ in range(40):
@@ -33,13 +33,13 @@ with sync_playwright() as p:
         if "읽는 중" not in pg.locator("#handwriting").inner_text() and "저장 중" not in pg.locator("#handwriting").inner_text(): break
     pg.wait_for_timeout(1000)
     t = pg.locator("#handwriting").inner_text()
-    check("1장 42칸 따냄", "42/42" in t, t[t.find("3. "):t.find("3. ") + 30].replace("\n", " "))
+    check("1장 42칸 따냄", "42/42" in t, t[t.find("조각 보기"):t.find("조각 보기") + 40].replace("\n", " "))
     jam = [f for f in json.load(urllib.request.urlopen(MOCK + "/_log"))["files"] if "/jamo/" in f]
     check("GitHub에 조각 저장", len(jam) == 42, len(jam))
-    chip = pg.locator("#handwriting .card").nth(3).locator(".chip").inner_text()
+    comp = pg.locator("#handwriting .card", has_text="2,350자 조합"); chip = comp.locator(".chip").inner_text()
     check("조합 가능 192자", "192" in chip, chip)
-    pg.locator("#handwriting .card").nth(3).screenshot(path=os.path.join(OUT, "hw-compose.png"))
-    pg.locator("#handwriting .card").nth(2).screenshot(path=os.path.join(OUT, "hw-cells.png"))
+    comp.screenshot(path=os.path.join(OUT, "hw-compose.png"))
+    pg.locator("#handwriting .card", has_text="조각 보기").screenshot(path=os.path.join(OUT, "hw-cells.png"))
     pg.locator("button", has_text="폰트 글자로 넣기").click()
     for _ in range(60):
         pg.wait_for_timeout(1500)

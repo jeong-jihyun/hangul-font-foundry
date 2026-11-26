@@ -77,7 +77,7 @@ function MyGlyph({ check, g, ver, fallback }) {
     src={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/preview/${g.filename}?v=${ver}`} onError={() => setBad(true)} />;
 }
 
-export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplaced, saveToStore, loggedIn }) {
+export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplaced, saveToStore, loggedIn, markCustom }) {
   const [editing, setEditing] = useState(null);  // 편집기로 연 글자
   const [svgEdit, setSvgEdit] = useState(null);  // SVG-Edit 창 {svg, apply}
   const cs = useCharset(engine.status);
@@ -142,6 +142,7 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplac
     const file = new File([svg], name, { type: "image/svg+xml" });
     let stored = false;
     if (saveToStore) stored = await saveToStore(name, file); // 실패하면 여기서 오류가 나 편집기에 알려 줌
+    markCustom?.(name); // 직접 고친 글자: 다시 조합해도 덮어쓰지 않음
     if (!hasGlyphSource()) { // zip 없이 앱에서 처음 그리는 경우: 이 글자 하나로 묶음을 시작
       zipMemory.file = new File([zipSync({ [name]: strToU8(svg) })], "앱에서 그린 글자.zip", { type: "application/zip" });
       zipMemory.glyphSetId = null; zipMemory.replacements = {}; zipMemory.removed = [];

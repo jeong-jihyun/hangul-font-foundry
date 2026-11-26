@@ -206,6 +206,14 @@ export default function Page() {
     else localSet("glyphroom-local-font-settings", st);
   };
 
+  // 글자 탭에서 한 글자씩 직접 고친 글자 (다시 조합할 때 덮어쓰지 않음) — 폰트 설정에 기억
+  const markCustom = (name) => {
+    const cur = fontSettings.customGlyphs || [];
+    if (cur.includes(name)) return;
+    saveFontSettings({ ...fontSettings, customGlyphs: [...cur, name].slice(-3000) }).catch?.(() => {});
+  };
+  const startBase = () => { try { sessionStorage.setItem("glyphroom-base", "fill"); } catch {} go("handwriting"); };
+
   const toast = useCallback((s) => {
     setMsg(s);
     clearTimeout(timer.current);
@@ -242,9 +250,9 @@ export default function Page() {
             onCreate={async (name) => { const p = await createProject(name); const l = await refresh(); openProject(p.id, l); }}
             onRename={async (id, name) => { await updateProject(id, { name }); await refresh(); }}
             onDelete={async (id) => { await deleteProject(id); let l = await refresh(); if (!l.length) { await createProject("나의 첫 폰트"); l = await refresh(); } openProject(l[0].id, l); }} />
-          {tab === "home" && <HomeScreen go={go} check={check} build={build} engine={engine} openEditor={openEditor} saved={current?.glyphCount || 0} fontName={current?.name} />}
-          {tab === "handwriting" && <HandwritingScreen engine={engine} toast={toast} go={go} projectId={uid ? pid : null} applyGlyphZip={applyGlyphZip} />}
-          {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onGlyphReplaced={onGlyphReplaced} saveToStore={saveToStore} loggedIn={!!uid} />}
+          {tab === "home" && <HomeScreen go={go} check={check} build={build} engine={engine} openEditor={openEditor} startBase={startBase} saved={current?.glyphCount || 0} fontName={current?.name} />}
+          {tab === "handwriting" && <HandwritingScreen engine={engine} toast={toast} go={go} projectId={uid ? pid : null} applyGlyphZip={applyGlyphZip} customGlyphs={fontSettings.customGlyphs || []} />}
+          {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onGlyphReplaced={onGlyphReplaced} saveToStore={saveToStore} loggedIn={!!uid} markCustom={markCustom} />}
           {tab === "check" && <CheckScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onZipChecked={onZipChecked} onFileRemoved={onFileRemoved} openEditor={openEditor} />}
           {tab === "build" && ready && <BuildScreen settings={settings} engine={engine} check={check} go={go} build={build} startBuild={startBuild} cancelBuild={cancelBuild}
             fontSettings={fontSettings} saveFontSettings={saveFontSettings} fontName={current?.name} openEditor={openEditor} />}
