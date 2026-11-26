@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE, api } from "../lib/api";
 import { SAMPLE_GLYPHS } from "./data";
 import { PageHead, Card, Button, Result, StatusChip } from "./ui";
-import { replaceGlyph, zipMemory } from "./CheckScreen";
+import { replaceGlyph, zipMemory, hasGlyphSource } from "./CheckScreen";
 
 const PAGE = 60; // 한 번에 그리는 글자 수 (2,438자를 한꺼번에 그리면 폰이 느려짐)
 const GROUPS = [["all", "전체"], ["hangul", "한글"], ["latin", "숫자·영문"], ["symbol", "기호"]];
@@ -60,7 +60,7 @@ function MyGlyph({ check, g, ver, fallback }) {
     src={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/preview/${g.filename}?v=${ver}`} onError={() => setBad(true)} />;
 }
 
-export function GlyphsScreen({ engine, toast, check, setCheck, go }) {
+export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplaced }) {
   const cs = useCharset(engine.status);
   const live = cs.status === "ready";
   const items = useMemo(
@@ -204,6 +204,7 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go }) {
               setBusy(true);
               try {
                 const r = await replaceGlyph(sel.filename, f);
+                onGlyphReplaced?.(sel.filename, f);
                 setCheck({ ...r, fileName: zipMemory.file?.name || check?.fileName, checkedAt: new Date().toISOString() });
                 setVer((v) => v + 1);
                 const st = new Set(r.ready).has(sel.char) ? "통과" : "고칠 곳 있음";
@@ -220,7 +221,7 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go }) {
                       ? <a className="btn light" href={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/files/${sel.filename}`} download={sel.filename}>⇩ 고치기용으로 받기</a>
                       : <a className="btn light" href={`${API_BASE}/api/v1/templates/${sel.codepoint}.svg`} download={sel.filename}>⇩ 빈 바탕 받기</a>}
                     <Button loading={busy} onClick={() => {
-                      if (!zipMemory.file) { toast("먼저 검수 탭에서 글리프 zip을 골라 검수해 주세요."); return; }
+                      if (!hasGlyphSource()) { toast("먼저 검수 탭에서 글리프 zip을 골라 검수해 주세요."); return; }
                       fileRef.current?.click();
                     }}>⇧ {mine ? "고친 파일 올리기" : "그린 파일 올리기"}</Button>
                   </div>

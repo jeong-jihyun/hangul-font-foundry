@@ -101,3 +101,15 @@ details.log summary,details.more summary{cursor:pointer;font-size:12px;font-weig
 .compare small{font-size:10px;color:var(--muted)}.compare .myglyph{width:64px;height:64px}.compare .basechar{font-family:serif;font-size:52px;line-height:64px}
 .action-grid>:last-child:nth-child(odd){grid-column:auto}
 .issue-wrap{border-top:1px solid #efede7}.issue-wrap:first-child{border-top:0}.issue-wrap .issue{border-top:0;padding-bottom:2px}.issue-acts{padding:0 0 8px 0}.issue-acts .linkbtn{margin-top:0;font-size:11px}
+/* 8단계: 폰트 프로젝트 막대 */
+.projbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:10px 12px;margin:10px 0 4px;position:relative}
+.projbar.out{background:#fff9f6;border-color:#efd2c7}.projbar.out b{display:block;font-size:13px}.projbar.out small{display:block;font-size:11px;color:var(--muted)}
+.projbtn{border:0;background:none;text-align:left;padding:4px 2px;min-height:var(--tap);flex:1;min-width:0}.projbtn small{display:block;font-size:10px;color:var(--muted)}.projbtn b{font-size:14px;overflow-wrap:anywhere}
+.projpanel{flex-basis:100%;border-top:1px solid var(--line);padding-top:10px}
+.projlist{display:grid;gap:6px;max-height:280px;overflow:auto}
+.projitem{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 12px;text-align:left;min-height:var(--tap)}
+.projitem.active{border-color:var(--accent);background:#fff9f6}.projitem b{display:block;font-size:13px}.projitem small{display:block;font-size:10px;color:var(--muted)}
+.projacts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.projacts .btn{font-size:11px}
+.projform{margin-top:8px}.warnbox{background:var(--danger-soft);color:#7d2e22;border-radius:12px;padding:10px 12px;font-size:12px;margin:0 0 8px}
+@media(max-width:650px){.projbar{margin:12px 0 0}}
+.pinform{display:flex;gap:8px;flex-basis:100%}.pinform input{flex:1;min-width:0;min-height:var(--tap);border:1px solid var(--line);border-radius:12px;padding:0 12px;font-size:16px;background:#fff}

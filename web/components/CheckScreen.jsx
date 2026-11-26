@@ -8,7 +8,9 @@ const fmtSize = (n) => (n > 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + "MB" : 
 
 // 같은 zip 을 기억해 두고, 서버가 잊어버렸으면(무료 서버 재시작) 다시 올린다
 // replacements: 글자 교체로 올린 파일들 — zip 을 다시 올릴 때 함께 다시 적용한다
-export const zipMemory = { file: null, glyphSetId: null, replacements: {}, removed: [] };
+// loader: 저장된 프로젝트에서 zip 을 다시 만드는 함수 (8단계, 로그인 시)
+export const zipMemory = { file: null, glyphSetId: null, replacements: {}, removed: [], loader: null };
+export const hasGlyphSource = () => !!(zipMemory.file || zipMemory.loader);
 
 async function postReplacement(gid, name, file) {
   const fd = new FormData();
@@ -18,6 +20,13 @@ async function postReplacement(gid, name, file) {
 }
 
 export async function ensureGlyphSet(file) {
+  if (!file && zipMemory.loader) {
+    // 이 기기에 zip 이 없으면 저장된 글자로 다시 만든다
+    file = await zipMemory.loader();
+    if (!file) throw new Error("저장된 글자가 없습니다. 검수 탭에서 글리프 zip을 올려 주세요.");
+    zipMemory.file = file; zipMemory.replacements = {}; zipMemory.removed = [];
+  }
+  if (!file) throw new Error("먼저 검수 탭에서 글리프 zip을 올려 주세요.");
   if (zipMemory.file === file && zipMemory.glyphSetId) return zipMemory.glyphSetId;
   if (zipMemory.file !== file) { zipMemory.replacements = {}; zipMemory.removed = []; }
   const fd = new FormData();
@@ -32,7 +41,7 @@ export async function ensureGlyphSet(file) {
 
 // 잘못 들어간 파일 빼기 (이름 규칙 위반 등) → 다시 검수
 export async function removeFile(name) {
-  if (!zipMemory.file) throw new Error("먼저 위에서 글리프 zip을 골라 검수해 주세요.");
+  if (!hasGlyphSource()) throw new Error("먼저 위에서 글리프 zip을 골라 검수해 주세요.");
   const gid = await ensureGlyphSet(zipMemory.file);
   await api(`/glyphsets/${gid}/files/${encodeURIComponent(name)}`, { method: "DELETE" });
   zipMemory.removed.push(name);
@@ -42,7 +51,7 @@ export async function removeFile(name) {
 
 // 글자 1개 교체: 서버에 저장하고 기억해 둔다 (서버가 잊어도 다시 적용되도록)
 export async function replaceGlyph(name, file) {
-  if (!zipMemory.file) throw new Error("먼저 검수 탭에서 글리프 zip을 올려 주세요.");
+  if (!hasGlyphSource()) throw new Error("먼저 검수 탭에서 글리프 zip을 올려 주세요.");
   let gid = await ensureGlyphSet(zipMemory.file);
   try { await postReplacement(gid, name, file); }
   catch (e) {
@@ -77,7 +86,7 @@ export function GuideCard({ open = false }) {
   );
 }
 
-export function CheckScreen({ toast, engine, check, setCheck, go }) {
+export function CheckScreen({ toast, engine, check, setCheck, go, onZipChecked, onFileRemoved }) {
   const [file, setFile] = useState(zipMemory.file);
   const [phase, setPhase] = useState("idle"); // idle → uploading → checking
   const [err, setErr] = useState("");
@@ -95,11 +104,12 @@ export function CheckScreen({ toast, engine, check, setCheck, go }) {
   };
 
   const run = async () => {
-    if (!file) { setErr("먼저 글리프 zip 파일을 골라 주세요."); return; }
+    if (!file && !zipMemory.loader) { setErr("먼저 글리프 zip 파일을 골라 주세요."); return; }
     setErr("");
     try {
       setPhase("uploading");
-      let gid = await ensureGlyphSet(file);
+      let gid = await ensureGlyphSet(file || null);
+      const usedName = (file || zipMemory.file)?.name || "저장된 글자";
       setPhase("checking");
       let r;
       try {
@@ -108,11 +118,12 @@ export function CheckScreen({ toast, engine, check, setCheck, go }) {
         if (e.status !== 404) throw e;
         zipMemory.glyphSetId = null; // 서버가 잊었으면 한 번 더 올림
         setPhase("uploading");
-        gid = await ensureGlyphSet(file);
+        gid = await ensureGlyphSet(file || zipMemory.file);
         setPhase("checking");
         r = await api("/checks", { method: "POST", body: { projectId: "prj_0009", glyphSetId: gid } });
       }
-      setCheck({ ...r, fileName: file.name, checkedAt: new Date().toISOString() });
+      setCheck({ ...r, fileName: usedName, checkedAt: new Date().toISOString() });
+      if (file) onZipChecked?.(file); // 새로 고른 zip 이면, 로그인 상태에서 글자를 프로젝트에 저장
       setSev(r.summary.errors ? "error" : "warning");
       setShown(30);
       toast(r.summary.errors ? `검수 완료 · 고칠 곳 ${r.summary.errors}건` : "검수가 완료됐어요. 오류 0건을 확인했습니다.");
@@ -136,6 +147,7 @@ export function CheckScreen({ toast, engine, check, setCheck, go }) {
         <input ref={inputRef} type="file" accept=".zip,application/zip" onChange={pick} hidden id="zipInput" />
         <button className={"dropzone" + (file ? " has-file" : "")} onClick={() => inputRef.current?.click()} disabled={busy}>
           {file ? (<><b>🗜 {file.name}</b><small>{fmtSize(file.size)} · 눌러서 다른 파일 고르기</small></>)
+            : zipMemory.loader ? (<><b>☁ 저장된 글자 사용</b><small>그대로 "검수 실행"을 누르거나, 눌러서 새 zip 고르기</small></>)
             : (<><b>＋ zip 파일 고르기</b><small>U+AC00.svg 같은 SVG들을 압축한 파일 · 최대 15MB</small></>)}
         </button>
         {err && <div className="help error-text" role="alert" style={{ marginTop: 8 }}>✕ {err}</div>}
@@ -185,7 +197,7 @@ export function CheckScreen({ toast, engine, check, setCheck, go }) {
                     {glyphName
                       ? <button className="linkbtn" onClick={() => go("glyphs")}>글리프 탭에서 이 글자 고치기 →</button>
                       : <button className="linkbtn" onClick={async () => {
-                          try { const r = await removeFile(i.fileName); setCheck({ ...r, fileName: zipMemory.file.name, checkedAt: new Date().toISOString() }); toast(`${i.fileName} 를 뺐습니다 · 다시 검수 완료`); }
+                          try { const r = await removeFile(i.fileName); setCheck({ ...r, fileName: zipMemory.file.name, checkedAt: new Date().toISOString() }); toast(`${i.fileName} 를 뺐습니다 · 다시 검수 완료`); onFileRemoved?.(); }
                           catch (e) { toast(e.message); }
                         }}>이 파일 빼기 (글자 파일이 아님)</button>}
                   </div>
