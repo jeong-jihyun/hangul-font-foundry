@@ -319,3 +319,45 @@ export function contoursToSubs(contours) {
   });
 }
 export const contoursToSvg = (contours) => glyphSvg(subsToD(orient(contoursToSubs(contours))));
+
+// ---------- 점 줄이기 + 매끄럽게 (자동 따기·손글씨 조각처럼 점이 아주 많은 윤곽용) ----------
+// 1) 꼭 필요한 점만 남기고(Ramer–Douglas–Peucker) 2) 꺾인 곳은 모난 점, 나머지는 곡선 점으로
+function rdp(pts, eps) {
+  if (pts.length < 3) return pts;
+  const [a, b] = [pts[0], pts[pts.length - 1]];
+  let best = -1, bi = 0;
+  const dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy) || 1;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const d = Math.abs(dy * pts[i][0] - dx * pts[i][1] + b[0] * a[1] - b[1] * a[0]) / L;
+    if (d > best) { best = d; bi = i; }
+  }
+  if (best <= eps) return [a, b];
+  return [...rdp(pts.slice(0, bi + 1), eps).slice(0, -1), ...rdp(pts.slice(bi), eps)];
+}
+export function simplifyContour(c, eps = 9, cornerDeg = 55) {
+  // 닫힌 윤곽의 점 목록(곡선은 잘게 나눔)
+  const sub = contoursToSubs([c])[0];
+  let pts = flatten(sub, 6);
+  if (pts.length > 1 && Math.hypot(pts[0][0] - pts.at(-1)[0], pts[0][1] - pts.at(-1)[1]) < 0.01) pts.pop();
+  if (pts.length < 4) return c;
+  // 가장 먼 두 점에서 나눠 닫힌 선을 줄임
+  let far = 0, fd = 0;
+  for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i][0] - pts[0][0], pts[i][1] - pts[0][1]); if (d > fd) { fd = d; far = i; } }
+  const a = rdp(pts.slice(0, far + 1), eps), b = rdp([...pts.slice(far), pts[0]], eps);
+  const s = [...a.slice(0, -1), ...b.slice(0, -1)];
+  if (s.length < 3) return c;
+  const n = s.length, r = (v) => Math.round(v * 10) / 10;
+  const nodes = s.map((p, i) => {
+    const pv = s[(i - 1 + n) % n], nx = s[(i + 1) % n];
+    const v1 = [p[0] - pv[0], p[1] - pv[1]], v2 = [nx[0] - p[0], nx[1] - p[1]];
+    const l1 = Math.hypot(...v1), l2 = Math.hypot(...v2);
+    const cos = (v1[0] * v2[0] + v1[1] * v2[1]) / ((l1 * l2) || 1);
+    const ang = (Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI;
+    if (ang > cornerDeg) return { x: r(p[0]), y: r(p[1]), hin: null, hout: null, smooth: false };
+    // 곡선 점: 앞뒤 점을 잇는 방향으로 손잡이 (길이 = 이웃까지 거리의 1/3)
+    const t = [nx[0] - pv[0], nx[1] - pv[1]], tl = Math.hypot(...t) || 1;
+    const u = [t[0] / tl, t[1] / tl];
+    return { x: r(p[0]), y: r(p[1]), hin: { x: r(p[0] - u[0] * l1 / 3), y: r(p[1] - u[1] * l1 / 3) }, hout: { x: r(p[0] + u[0] * l2 / 3), y: r(p[1] + u[1] * l2 / 3) }, smooth: true };
+  });
+  return { nodes };
+}

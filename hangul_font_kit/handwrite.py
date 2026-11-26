@@ -268,3 +268,24 @@ def extract_page(img_bgr, px_per_mm=8.0):
         out.append({"key": c["key"], "jamo": c["jamo"], "sample": c["sample"], "part": c["part"], "status": status,
                     "d": d if status in ("ok", "messy", "faint") else ""})
     return {"page": page, "pages": len(pages()), "cells": out}
+
+
+def trace_image(img_bgr, threshold=140, max_side=1000):
+    """도안 그림 전체 → 검은 부분의 윤곽선 경로 (그림 픽셀 좌표, 긴 변 max_side 로 줄임).
+    threshold: 종이 밝기 대비 얼마나 어두워야 '그림'으로 볼지 (낮을수록 진한 것만)"""
+    cv2, np = _cv()
+    h, w = img_bgr.shape[:2]
+    k = min(1.0, max_side / max(h, w))
+    if k != 1.0:
+        img_bgr = cv2.resize(img_bgr, (round(w * k), round(h * k)), interpolation=cv2.INTER_AREA)
+    h, w = img_bgr.shape[:2]
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    win = max(31, (max(h, w) // 2) | 1)  # 굵은 획·꽉 찬 면보다 넉넉히 넓게 (속이 비지 않게)
+    bg = cv2.blur(cv2.dilate(gray, np.ones((win, win), np.uint8)), (win, win))
+    norm = cv2.divide(gray, bg, scale=255)
+    b, g, r = cv2.split(img_bgr.astype(np.int16))
+    blue = (b - r > 35) & (b - g > 10)
+    m = ((norm < int(threshold)) & ~blue).astype(np.uint8) * 255
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
+    d, cover = mask_to_path(m, w)  # 크기 그대로 (1픽셀 = 1)
+    return d, w, h, cover

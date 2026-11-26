@@ -5,7 +5,8 @@
 //  저장: 규칙 모양(절대좌표 경로, 바깥선/구멍 방향 정리)으로 만들어 넘긴다.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "./ui";
-import { contoursToSubs, contoursToSvg, subsToContours, subsToD, flatten, orient } from "../lib/glyph/geom";
+import { contoursToSubs, contoursToSvg, subsToContours, subsToD, flatten, orient, parsePathD, transformSub, simplifyContour } from "../lib/glyph/geom";
+import { api } from "../lib/api";
 import { normalizeSvg } from "../lib/glyph/normalize";
 
 const K = 0.5522847498;
@@ -56,6 +57,8 @@ export function GlyphEditor({ glyph, list = [], loadSvg, onSave, onClose, onNavi
   const [ref, setRef] = useState({ ...refMemory });
   const [panel, setPanel] = useState(null); // ref | more | null
   const [notes, setNotes] = useState([]);
+  const [thr, setThr] = useState(140);       // 자동 따기 진하기 기준
+  const [tracing, setTracing] = useState(false);
   const [ask, setAsk] = useState(null); // 저장 안 하고 떠날 때 묻기: {then}
   const past = useRef([]), future = useRef([]);
   const drag = useRef(null);
@@ -465,6 +468,33 @@ export function GlyphEditor({ glyph, list = [], loadSvg, onSave, onClose, onNavi
   const idx = list.findIndex((g) => g.filename === glyph.filename);
   const prev = idx > 0 ? list[idx - 1] : null, next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
 
+  // ---- 밑그림(도안)에서 자동으로 패스 따기: 서버가 검은 부분 윤곽을 따고, 밑그림 놓인 자리에 맞춰 넣는다 ----
+  const autoTrace = async (replace) => {
+    if (!ref.src || tracing) return;
+    setTracing(true);
+    try {
+      const img = new Image();
+      await new Promise((ok, no) => { img.onload = ok; img.onerror = no; img.src = ref.src; });
+      const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+      const cv = document.createElement("canvas");
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+      const blob = await new Promise((ok) => cv.toBlob(ok, "image/png"));
+      const fd = new FormData();
+      fd.append("file", new File([blob], "ref.png", { type: "image/png" }));
+      fd.append("threshold", String(thr));
+      const r = await api("/trace", { method: "POST", body: fd, timeout: 120000 });
+      const s = ref.size / r.width; // 밑그림은 가로 ref.size 칸으로 깔려 있음
+      const subs = orient(parsePathD(r.d).map((x) => transformSub(x, [s, 0, 0, s, ref.x, ref.y])));
+      const add = subsToContours(subs).map((c) => simplifyContour(c)); // 점을 줄이고 매끄럽게
+      commit((cs) => (replace ? add : [...cs, ...add]));
+      setSel(null); setPenOpen(null); setTool("select");
+      setRef((x) => ({ ...x, opacity: Math.min(x.opacity, 0.25) }));
+      toast?.(`도형 ${add.length}개를 따냈어요 · 선택 도구로 점을 다듬으세요`);
+    } catch (e) { toast?.(e.message || "자동으로 따내지 못했습니다."); }
+    finally { setTracing(false); }
+  };
+
   // ---- 파일 불러오기·내려받기 ----
   const fileRef = useRef(), refFile = useRef();
   const importSvg = async (text, from = "파일") => {
@@ -644,6 +674,16 @@ export function GlyphEditor({ glyph, list = [], loadSvg, onSave, onClose, onNavi
               <label>세로 위치 <input type="range" min="-500" max="500" step="5" value={ref.y} onChange={(e) => setRef((r) => ({ ...r, y: +e.target.value }))} /><span>{ref.y}</span></label>
             </div>
           )}
+          {ref.src && (
+            <div className="ed-trace">
+              <label>진하기 기준 <input type="range" min="60" max="220" step="5" value={thr} onChange={(e) => setThr(+e.target.value)} /><span>{thr}</span></label>
+              <div className="row-gap">
+                <Button loading={tracing} onClick={() => autoTrace(!contours.length)}>✦ 자동으로 패스 따기</Button>
+                {contours.length > 0 && <Button variant="light" disabled={tracing} onClick={() => autoTrace(true)}>지우고 새로 따기</Button>}
+              </div>
+              <small className="muted">도안의 검은 부분을 점·선 패스로 바꿔 넣습니다. 너무 굵게 나오면 기준을 낮추고, 끊기면 높이세요. 되돌리기(↶)로 취소할 수 있어요.</small>
+            </div>
+          )}
           <p className="muted" style={{ margin: "6px 0 0" }}>직접 쓴 손글씨나 스케치를 사진으로 찍어 깔고 따라 그리세요. 다른 폰트의 글자를 따라 그리면 안 됩니다. 밑그림은 저장되지 않고, 글자를 옮겨도 이 창을 닫기 전까지 유지됩니다.</p>
         </div>
       )}
@@ -659,6 +699,7 @@ export function GlyphEditor({ glyph, list = [], loadSvg, onSave, onClose, onNavi
             <button onClick={() => fileRef.current?.click()}><b>SVG 파일 불러오기</b><small>일러스트레이터·Inkscape 등에서 만든 파일 → 자동 정리</small></button>
             <button onClick={download} disabled={!closedContours.length}><b>SVG 내려받기</b><small>{glyph.filename} · 다른 프로그램에서 고칠 때</small></button>
             {onOpenSvgEdit && <button onClick={() => { setPanel(null); onOpenSvgEdit(contoursToSvg(closedContours), (text) => importSvg(text, "SVG-Edit")); }}><b>SVG-Edit에서 열기</b><small>PC용 고급 편집기 · 저장하면 여기로 돌아와 자동 정리</small></button>}
+            <button onClick={() => { if (contours.length) { commit((cs) => cs.map((c) => (c.nodes.length > 12 ? simplifyContour(c) : c))); setPanel(null); toast?.("점을 줄이고 매끄럽게 했어요 · 되돌리기(↶) 가능"); } }} disabled={!contours.some((c) => c.nodes.length > 12)}><b>점 줄이기·매끄럽게</b><small>사진에서 따낸 글씨처럼 점이 아주 많을 때 · 모서리는 그대로</small></button>
             <button onClick={() => { if (contours.length) { commit([]); setSel(null); setPenOpen(null); } }}><b>모두 지우기</b><small>되돌리기(↶)로 되살릴 수 있음</small></button>
           </div>
           <p className="muted" style={{ margin: "6px 0 0" }}>PC 단축키: V 선택 · P 펜 · A 점 추가 · R 사각형 · E 원 · H 이동 · Ctrl+Z 되돌리기 · Ctrl+S 저장 · 방향키 1칸(Shift 10칸) · Delete 지우기 · 마우스 휠 확대</p>

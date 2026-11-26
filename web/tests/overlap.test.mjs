@@ -15,3 +15,17 @@ test("안에 든 도형은 구멍", () => {
   const s = orient(contoursToSubs([rect(100, 100, 600, 600), rect(300, 300, 100, 100)]));
   assert.ok(area(flatten(s[0])) < 0 && area(flatten(s[1])) > 0);
 });
+
+import { simplifyContour, subsToContours } from "../lib/glyph/geom.js";
+test("점 줄이기: 둥근 고리는 점이 크게 줄고 넓이는 거의 같음, 네모는 모서리 4개", () => {
+  const ring = []; for (let i = 0; i < 180; i++) { const a = (i / 180) * Math.PI * 2; ring.push({ x: 500 + 200 * Math.cos(a), y: 500 + 200 * Math.sin(a), hin: null, hout: null }); }
+  const s = simplifyContour({ nodes: ring });
+  assert.ok(s.nodes.length <= 24 && s.nodes.length >= 6, s.nodes.length);
+  const A = (c) => Math.abs(area(flatten(contoursToSubs([c])[0])));
+  assert.ok(Math.abs(A(s) - A({ nodes: ring })) / A({ nodes: ring }) < 0.02);
+  const sq = [];
+  for (let i = 0; i <= 50; i++) sq.push({ x: 100 + i * 4, y: 100 }); for (let i = 1; i <= 50; i++) sq.push({ x: 300, y: 100 + i * 8 });
+  for (let i = 1; i <= 50; i++) sq.push({ x: 300 - i * 4, y: 500 }); for (let i = 1; i < 50; i++) sq.push({ x: 100, y: 500 - i * 8 });
+  const q = simplifyContour({ nodes: sq.map((p) => ({ ...p, hin: null, hout: null })) });
+  assert.equal(q.nodes.length, 4); assert.ok(q.nodes.every((n) => !n.smooth));
+});

@@ -144,7 +144,7 @@ details.log summary,details.more summary{cursor:pointer;font-size:12px;font-weig
 .ed-bottom{background:var(--surface);border-top:1px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom))}
 .ed-tools{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}.ed-tools button{border:0;background:transparent;border-radius:12px;padding:6px 2px;min-height:var(--tap);color:#6f716a}.ed-tools button span{display:block;font-size:19px;line-height:1.1}.ed-tools button small{font-size:10px}.ed-tools button.on{background:var(--accent-soft);color:var(--accent)}
 .ed-actions{display:flex;gap:6px;margin-top:6px;overflow-x:auto}.ed-actions button{flex:none;min-height:38px;border:1px solid var(--line);background:#fff;border-radius:10px;padding:0 12px;font-size:12px}.ed-actions button.on{border-color:var(--accent);color:var(--accent)}.ed-actions button:disabled{opacity:.35}
-@media(min-width:900px){.editor{left:50%;transform:translateX(-50%);max-width:1100px;border-left:1px solid var(--line);border-right:1px solid var(--line)}}
+@media(min-width:900px){.editor{left:50%;right:auto;width:min(1100px,100vw);transform:translateX(-50%);border-left:1px solid var(--line);border-right:1px solid var(--line)}}
 .svgedit-modal{position:fixed;inset:0;z-index:70;background:var(--paper);display:flex;flex-direction:column}.svgedit-frame{flex:1;border:0;width:100%;background:#fff}
 @media(min-width:900px){.editor{box-shadow:0 0 0 100vmax rgba(32,34,31,.45)}}
 /* ---- 손글씨 화면 ---- */
@@ -157,3 +157,4 @@ details.log summary,details.more summary{cursor:pointer;font-size:12px;font-weig
 /* 로고·윗줄 */
 .brand{border:0;background:transparent;padding:0;color:inherit;text-align:left;cursor:pointer}.brand .logo{flex:none;display:block}.brand-text{display:flex;flex-direction:column;line-height:1.15}.brand-text b{font-size:17px;font-weight:800;letter-spacing:-.03em}.brand-text small{font-size:11px;font-weight:500;color:var(--muted);letter-spacing:0}
 @media(max-width:650px){.brand>span.brand-text{display:flex}.brand-text b{font-size:16px}}
+.ed-trace{display:grid;gap:8px;margin-top:10px;padding:10px;border-radius:12px;background:#fff9f6;border:1px solid #efd2c7}.ed-trace label{display:grid;grid-template-columns:80px 1fr 36px;align-items:center;gap:8px;font-size:12px}.ed-trace input{width:100%;accent-color:var(--accent)}

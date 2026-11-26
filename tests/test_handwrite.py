@@ -91,3 +91,19 @@ def test_api_extract():
     assert j["page"] == 0 and j["counts"]["ok"] == 3
     bad = c.post("/api/v1/handwriting/extract", files={"file": ("x.jpg", b"not an image", "image/jpeg")})
     assert bad.status_code == 400 and bad.json()["error"]["code"] == "VALIDATION_ERROR"
+
+
+def test_trace_api():
+    from fastapi.testclient import TestClient
+    from server.api.main import app
+    c = TestClient(app)
+    img = np.full((600, 800, 3), 235, np.uint8)
+    cv2.rectangle(img, (100, 100), (300, 500), (20, 20, 20), -1)       # 막대
+    cv2.circle(img, (550, 300), 150, (20, 20, 20), 40)                   # 고리 (구멍 있음)
+    ok, buf = cv2.imencode(".png", img)
+    r = c.post("/api/v1/trace", files={"file": ("a.png", buf.tobytes(), "image/png")}, data={"threshold": "140"})
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j["width"] == 800 and j["d"].count("M") == 3  # 막대 1 + 고리 바깥·안쪽 2
+    blank = cv2.imencode(".png", np.full((600, 800, 3), 240, np.uint8))[1].tobytes()
+    assert c.post("/api/v1/trace", files={"file": ("b.png", blank, "image/png")}).status_code == 422
