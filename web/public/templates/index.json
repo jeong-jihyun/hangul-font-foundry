@@ -1,0 +1,89 @@
+[
+ {
+  "key": "gulim",
+  "label": "굴림체",
+  "count": 2438,
+  "fit": [
+   1,
+   0,
+   26.3125
+  ],
+  "missing": "",
+  "size": 1937411,
+  "repo": "https://github.com/googlefonts/gulim",
+  "copyright": "Copyright 2024 The Gulim and Dotum Project Authors (https://github.com/googlefonts/gulim)",
+  "reserved": [],
+  "license": "OFL-1.1"
+ },
+ {
+  "key": "dotum",
+  "label": "돋움체",
+  "count": 2438,
+  "fit": [
+   1,
+   0,
+   28.2656
+  ],
+  "missing": "",
+  "size": 1213479,
+  "repo": "https://github.com/googlefonts/gulim",
+  "copyright": "Copyright 2024 The Gulim and Dotum Project Authors (https://github.com/googlefonts/gulim)",
+  "reserved": [],
+  "license": "OFL-1.1"
+ },
+ {
+  "key": "gungsuh",
+  "label": "궁서체",
+  "count": 2438,
+  "fit": [
+   0.9756,
+   0,
+   46.9592
+  ],
+  "missing": "",
+  "size": 3258076,
+  "repo": "https://github.com/googlefonts/batang",
+  "copyright": "Copyright 2024 The Batang and Gungsuh Project Authors (https://github.com/googlefonts/batang)",
+  "reserved": [],
+  "license": "OFL-1.1"
+ },
+ {
+  "key": "myeongjo",
+  "label": "명조체 (바탕)",
+  "count": 2438,
+  "fit": [
+   1,
+   0,
+   42.5885
+  ],
+  "missing": "",
+  "size": 2984461,
+  "repo": "https://github.com/googlefonts/batang",
+  "copyright": "Copyright 2024 The Batang and Gungsuh Project Authors (https://github.com/googlefonts/batang)",
+  "reserved": [],
+  "license": "OFL-1.1"
+ },
+ {
+  "key": "gothic",
+  "label": "고딕체 (나눔고딕)",
+  "count": 2438,
+  "fit": [
+   0.9552,
+   0,
+   4.8695
+  ],
+  "missing": "",
+  "size": 2124942,
+  "repo": "https://github.com/google/fonts/tree/main/ofl/nanumgothic",
+  "copyright": "Copyright (c) 2010, NHN Corporation (http://www.nhncorp.com), with Reserved Font Name Nanum, Naver Nanum, NanumGothic, Naver  NanumGothic, NanumMyeongjo, Naver NanumMyeongjo, NanumBrush, Naver NanumBrush, NanumPen, Naver NanumPen.",
+  "reserved": [
+   "Nanum",
+   "Naver Nanum",
+   "NanumGothic",
+   "Naver NanumGothic",
+   "나눔",
+   "나눔고딕"
+  ],
+  "license": "OFL-1.1"
+ }
+]

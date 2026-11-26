@@ -132,7 +132,8 @@ export default function Page() {
 
   // 검수에 쓴 글자로 바로 만들기 (zip 을 다시 고를 필요 없음)
   const startBuild = async ({ familyName, allowMissing, widths = {} }) => {
-    const body = (gid) => ({ projectId: "prj_0009", glyphSetId: gid, allowMissing, familyName, previewText: settings.preview, ...widths });
+    const body = (gid) => ({ projectId: "prj_0009", glyphSetId: gid, allowMissing, familyName, previewText: settings.preview, ...widths,
+      oflBases: fontSettings.oflBases || [] });
     let gid = (zipMemory.file || zipMemory.loader) ? await ensureGlyphSet(zipMemory.file) : check?.glyphSetId;
     if (!gid) throw new Error("먼저 검수 탭에서 글리프 zip을 올려 주세요.");
     let r;
@@ -251,7 +252,8 @@ export default function Page() {
             onRename={async (id, name) => { await updateProject(id, { name }); await refresh(); }}
             onDelete={async (id) => { await deleteProject(id); let l = await refresh(); if (!l.length) { await createProject("나의 첫 폰트"); l = await refresh(); } openProject(l[0].id, l); }} />
           {tab === "home" && <HomeScreen go={go} check={check} build={build} engine={engine} openEditor={openEditor} startBase={startBase} saved={current?.glyphCount || 0} fontName={current?.name} />}
-          {tab === "handwriting" && <HandwritingScreen engine={engine} toast={toast} go={go} projectId={uid ? pid : null} applyGlyphZip={applyGlyphZip} customGlyphs={fontSettings.customGlyphs || []} />}
+          {tab === "handwriting" && <HandwritingScreen engine={engine} toast={toast} go={go} projectId={uid ? pid : null} applyGlyphZip={applyGlyphZip} customGlyphs={fontSettings.customGlyphs || []}
+            fontSettings={fontSettings} saveFontSettings={saveFontSettings} />}
           {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onGlyphReplaced={onGlyphReplaced} saveToStore={saveToStore} loggedIn={!!uid} markCustom={markCustom} />}
           {tab === "check" && <CheckScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onZipChecked={onZipChecked} onFileRemoved={onFileRemoved} openEditor={openEditor} />}
           {tab === "build" && ready && <BuildScreen settings={settings} engine={engine} check={check} go={go} build={build} startBuild={startBuild} cancelBuild={cancelBuild}

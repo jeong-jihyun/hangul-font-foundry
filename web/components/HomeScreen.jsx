@@ -17,7 +17,7 @@ function plan(check, build, saved) {
     { n: 4, t: "받기·써 보기", d: built ? "폰트 파일 받기, 문장 써 보기" : "만든 폰트 설치·확인", done: false },
   ];
   let next;
-  if (!s && !saved) next = { title: "기초 도안으로 2,350자를 먼저 채워 보세요", desc: "앱이 만든 고딕 획으로 2,350자가 한 번에 만들어져요. 그다음 자음·모음 조각을 손글씨 사진이나 편집기로 고치면, 그 조각이 들어간 글자가 모두 바뀌어요.", btn: "기초 도안으로 채우기", act: { base: true }, alt: { btn: "손글씨로 시작", to: "handwriting" }, step: 1 };
+  if (!s && !saved) next = { title: "기초 도안으로 2,350자를 먼저 채워 보세요", desc: "앱이 만든 고딕 획으로 2,350자가 한 번에 만들어져요. 그다음 자음·모음 조각을 손글씨 사진이나 편집기로 고치면, 그 조각이 들어간 글자가 모두 바뀌어요.", btn: "기초 도안으로 채우기", act: { base: true }, alt: { btn: "글꼴 도안 5종으로 연습", to: "handwriting" }, step: 1 };
   else if (!s && saved) next = { title: `저장된 글자 ${saved.toLocaleString()}자가 있어요`, desc: "이어서 그리거나, 검수 탭에서 '검수 실행'을 누르면 저장된 글자를 불러와 바로 폰트를 만들 수 있어요.", btn: "다음 글자 그리기", act: { edit: "next" }, alt: { btn: "저장된 글자 검수", to: "check" }, step: 1 };
   else if (s.errors) next = { title: `고칠 곳 ${s.errors}건이 있어요`, desc: "문제 목록에서 이유를 보고, 그 글자를 편집기로 열어 고치거나 자동 정리된 파일로 다시 올리세요.", btn: "고칠 곳 보기", to: "check", step: 2 };
   else if (building) next = { title: "폰트를 만드는 중이에요", desc: "보통 수십 초면 끝나요. 진행 상황을 볼 수 있어요.", btn: "진행 상황 보기", to: "build", step: 3 };
@@ -81,6 +81,25 @@ export function HomeScreen({ go, check, build, engine, openEditor, startBase, sa
           ))}
         </ol>
       </div>
+
+      <div className="section-title"><h2>처음이라면 이렇게</h2><span>따라하기</span></div>
+      <details className="panel more" open={!s && !saved}>
+        <summary><b>연습 폰트로 한 바퀴 → 판매용 폰트 만들기</b></summary>
+        <ol className="guide-steps" style={{ marginTop: 12 }}>
+          <li><span><b>연습용 폰트를 하나 만드세요</b><small>위의 폰트 줄에서 잠금을 열고 '새 폰트'로 '연습'을 만듭니다.</small></span></li>
+          <li><span><b>도안 탭에서 글꼴 도안 하나를 넣으세요</b><small>고딕·명조·굴림·돋움·궁서 중 하나를 누르면 2,438자가 한 번에 들어가요.</small></span></li>
+          <li><span><b>글자 탭에서 '가'를 열어 고쳐 보세요</b><small>점을 끌어 모양을 바꾸고 저장(Ctrl+S)하면 자동으로 검수돼요.</small></span></li>
+          <li><span><b>폰트 만들기 탭에서 시험용 폰트를 받아 설치해 보세요</b><small>내 컴퓨터·폰에서 문장을 써 보며 흐름을 익힙니다.</small></span></li>
+          <li><span><b>익숙해지면 판매용 새 폰트를 만드세요</b><small>기초 도안으로 2,350자를 채우고 → 손글씨 종이 1장(192자)부터 사진으로 올려 → 조각을 고쳐 나갑니다.</small></span></li>
+        </ol>
+        <ul className="tips">
+          <li><b>연습용과 판매용 폰트를 나누세요.</b> 글꼴 도안(OFL)이 섞인 폰트는 팔 수 없어요.</li>
+          <li><b>글자보다 조각을 고치세요.</b> 'ㄱ' 조각 하나를 고치면 그 조각이 들어간 글자가 모두 바뀝니다.</li>
+          <li><b>획 굵기와 높이를 맞추세요.</b> 편집기의 격자와 바닥선(주황 선, 800)에 맞추면 글자가 고르게 보여요.</li>
+          <li><b>문장으로 확인하세요.</b> 한 글자씩 보면 괜찮아도 '다람쥐 헌 쳇바퀴에 타고파'처럼 이어 보면 어색한 글자가 보여요.</li>
+          <li><b>팔기 전에</b> 라이선스·상품 설명은 초안이라 직접 고치고, 마켓 기준과 OS별 표시는 직접 확인하세요 (앱이 확인할 수 없어요).</li>
+        </ul>
+      </details>
 
       <div className="section-title"><h2>최근 작업</h2></div>
       <div className="panel">

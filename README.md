@@ -14,8 +14,9 @@
 | 저장 | 비밀번호(PIN)로 잠금. 폰트마다 GitHub 비공개 저장소 `hangul-font-glyphs` 폴더에 저장(저장할 때마다 기록) |
 | 검수 | 빠진 글자, 파일명(`U+AC00.svg`), 1000×1000 틀 이탈, 열린 경로 등 |
 | 폰트 만들기 | TTF + 견본 그림·PDF + 상품·라이선스 초안. 폰트마다 이름·글자 너비 저장 |
+| 연습용 도안 5종 | 고딕(나눔고딕)·명조(바탕)·굴림·돋움·궁서 2,438자 SVG. OFL 글꼴에서 만듦 → 이 도안을 쓴 폰트는 OFL.txt 포함·판매 불가 |
 
-마켓 입점·심사·등록은 하지 않습니다. 다른 폰트 윤곽을 변환·복제하는 기능도 없습니다.
+마켓 입점·심사·등록은 하지 않습니다. 사용자가 올린 다른 폰트 윤곽을 변환·복제하는 기능은 없습니다 (예외: 위 연습용 OFL 도안 5종, `tools/make_templates.py`로 미리 만들어 둠).
 
 ## 구조
 - `hangul_font_kit/` 엔진(fontTools) · `server/api/` FastAPI(Render, `render.yaml`)
@@ -24,8 +25,8 @@
 
 ## 시험
 ```
-python -m pytest -q          # 엔진·API 29건
-cd web && npm test           # 자동 정리·방향 12건
+python -m pytest -q          # 엔진·API·손글씨·OFL 도안 38건
+cd web && npm test           # 자동 정리·방향·조합 16건
 ```
 브라우저 전체 흐름 시험(폰 크기): `web/tests/e2e/README.md`
 

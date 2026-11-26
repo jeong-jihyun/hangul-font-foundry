@@ -37,6 +37,9 @@ def check_folder(folder, config, required=None):
         if g["viewBox"] and tuple(g["viewBox"]) != (0, 0, canvas, canvas):
             problems.append((n, f"viewBox {g['viewBox']} (필요 0 0 {canvas} {canvas})"))
         if not g["subpaths"]:
+            if cp == 0x20:  # 공백은 그릴 것이 없어야 정상 (너비만 씀)
+                found[cp] = p
+                continue
             problems.append((n, "그려진 선이 없음")); continue
         if any(not (0 <= x <= canvas and 0 <= y <= canvas) for x, y in points(g["subpaths"])):
             problems.append((n, f"캔버스 {canvas}x{canvas} 밖으로 나간 점이 있음"))

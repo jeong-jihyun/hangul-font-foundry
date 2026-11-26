@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { API_BASE } from "../lib/api";
 import { PageHead, Card, Button, Field, Result, Notice, StatusChip } from "./ui";
+import { TEMPLATES, RESERVED } from "./HandwritingScreen";
 
 const fmtSize = (n) => (n > 1024 * 1024 ? (n / 1024 / 1024).toFixed(1) + "MB" : Math.max(1, Math.round(n / 1024)) + "KB");
 const STEP_ICON = { waiting: "○", running: "◌", done: "✓", failed: "✕", cancelled: "–" };
@@ -117,8 +118,11 @@ export function BuildScreen({ settings, engine, check, go, build, startBuild, ca
   const s = check?.summary;
   const missing = s ? s.required - s.passed : 0;
 
+  const ofl = fontSettings.oflBases || [];
   const start = async (allowMissing) => {
     if (!name.trim()) { setNameErr("글꼴 이름을 입력해 주세요."); return; }
+    const hit = ofl.flatMap((k) => RESERVED[k] || []).find((r) => name.toLowerCase().replace(/\s/g, "").includes(r.toLowerCase()));
+    if (hit) { setNameErr(`'${hit}'은(는) 도안 원본의 예약 이름이라 새 폰트 이름에 쓸 수 없어요 (OFL 규칙).`); return; }
     for (const [k, [lo, hi, label]] of Object.entries(WR)) {
       const v = Number(widths[k]);
       if (!Number.isFinite(v) || v < lo || v > hi) { setRunErr(`${label}는 ${lo}~${hi} 사이로 넣어 주세요.`); return; }
@@ -187,6 +191,7 @@ export function BuildScreen({ settings, engine, check, go, build, startBuild, ca
               </div>
               <p className="muted" style={{ margin: 0 }}>글자 칸 1000 기준입니다. 한글 너비를 줄이면 글자 사이가 좁아집니다. 폰트를 만들 때 이 폰트의 설정으로 함께 저장됩니다.</p>
             </details>
+            {ofl.length > 0 && <Notice>이 폰트는 연습용 OFL 도안({ofl.map((k) => TEMPLATES.find((x) => x.key === k)?.label || k).join(", ")})을 썼습니다. 만든 폰트는 <b>판매할 수 없고</b> OFL 로만 배포할 수 있어요. 결과 묶음에 OFL.txt 가 함께 들어갑니다.</Notice>}
             {runErr && <Result show tone="error"><strong>✕ 시작하지 못했습니다.</strong>{runErr}</Result>}
             {s.errors > 0 ? (
               <>

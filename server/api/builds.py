@@ -18,7 +18,7 @@ import uuid
 from fastapi import APIRouter, Request
 from pydantic import BaseModel, Field
 
-from hangul_font_kit import builder, checker, docs_draft, specimen
+from hangul_font_kit import builder, checker, docs_draft, specimen, templates
 from hangul_font_kit.cli import _cfg
 
 from .glyphs import STORE as GLYPH_STORE, _set_dir
@@ -51,6 +51,8 @@ class BuildRequest(BaseModel):
     advanceHangul: int | None = Field(default=None, ge=500, le=1500)
     advanceOther: int | None = Field(default=None, ge=200, le=1500)
     advanceSpace: int | None = Field(default=None, ge=100, le=1000)
+    # 연습용 OFL 도안(굴림·돋움·궁서·명조·고딕)을 쓴 폰트: 도안 키 목록. 있으면 OFL 라이선스로 만든다
+    oflBases: list[str] = Field(default_factory=list, max_length=5)
 
 
 class Cancelled(Exception):
@@ -113,6 +115,11 @@ def _run(bid):
         for k, ck in (("advanceHangul", "advance_hangul"), ("advanceOther", "advance_other"), ("advanceSpace", "advance_space")):
             if b["_req"].get(k):
                 cfg[ck] = b["_req"][k]
+        bases = [k for k in b["_req"].get("oflBases") or [] if k in templates.TEMPLATES]
+        if bases:
+            cfg["copyright"] = templates.license_text(bases, cfg["family_name"]).split("\n\n")[0].replace("\n", " ")
+            cfg["license"] = "This Font Software is licensed under the SIL Open Font License, Version 1.1."
+            cfg["license_url"] = "https://openfontlicense.org"
         out = b["_dir"]
         os.makedirs(out, exist_ok=True)
 
@@ -152,12 +159,16 @@ def _run(bid):
 
         guard(); _set_step(b, "drafts", "running")
         with open(os.path.join(out, "license_draft.md"), "w", encoding="utf-8") as f:
-            f.write(docs_draft.license_table())
+            f.write(templates.license_draft(bases, cfg["family_name"]) if bases else docs_draft.license_table())
+        if bases:
+            with open(os.path.join(out, "OFL.txt"), "w", encoding="utf-8") as f:
+                f.write(templates.license_text(bases, cfg["family_name"]))
         with open(os.path.join(out, "product_draft.md"), "w", encoding="utf-8") as f:
-            f.write(docs_draft.product_draft(cfg["family_name"], n, r["required"], cfg["sample_sentence"]))
+            f.write(docs_draft.product_draft(cfg["family_name"], n, r["required"], cfg["sample_sentence"])
+                    + ("- **OFL 도안을 써서 만든 폰트입니다. 폰트 파일만 따로 판매할 수 없고, OFL 로 무료 배포만 할 수 있습니다.**\n" if bases else ""))
         _set_step(b, "drafts", "done", "초안 — 공개 전 전문가 확인 필요")
 
-        kinds = {".ttf": "ttf", ".png": "png", ".pdf": "pdf", ".md": "draft"}
+        kinds = {".ttf": "ttf", ".png": "png", ".pdf": "pdf", ".md": "draft", ".txt": "license"}
         b["artifacts"] = [{"type": kinds.get(os.path.splitext(fn)[1], "file"), "name": fn,
                            "size": os.path.getsize(os.path.join(out, fn)), "artifactId": f"art_{bid}_{i}"}
                           for i, fn in enumerate(sorted(os.listdir(out), key=lambda x: (not x.endswith(".ttf"), x)))]
@@ -202,6 +213,13 @@ def create_build(req: BuildRequest, request: Request):
         return _err(request, 404, "RESOURCE_NOT_FOUND", "올린 글리프가 서버에 없습니다. 다시 올려 주세요.", {"glyphSetId": req.glyphSetId}, retryable=True)
     if req.familyName is not None and not req.familyName.strip():
         return _err(request, 400, "VALIDATION_ERROR", "글꼴 이름을 입력해 주세요.", {"fields": [{"field": "familyName", "reason": "빈 값"}]})
+    bad = [k for k in req.oflBases if k not in templates.TEMPLATES]
+    if bad:
+        return _err(request, 400, "VALIDATION_ERROR", "알 수 없는 도안입니다.", {"fields": [{"field": "oflBases", "reason": ",".join(bad)}]})
+    hit = templates.reserved_hit(req.oflBases, req.familyName or _cfg(None)["family_name"])
+    if hit:
+        return _err(request, 400, "VALIDATION_ERROR", f"도안 원본의 예약 이름 '{hit}'은(는) 새 폰트 이름에 쓸 수 없습니다(OFL 규칙). 다른 이름을 지어 주세요.",
+                    {"fields": [{"field": "familyName", "reason": "예약 이름"}]})
     with LOCK:
         for b in BUILDS.values():
             if b["glyphSetId"] == req.glyphSetId and b["status"] in ("queued", "running"):
@@ -215,7 +233,8 @@ def create_build(req: BuildRequest, request: Request):
             "log": [], "artifacts": [], "error": None,
             "_dir": os.path.join(BUILD_STORE, bid), "_glyphs": d, "_cancel": False, "_t": time.time(),
             "_req": {"allowMissing": req.allowMissing, "familyName": (req.familyName or "").strip() or None, "previewText": req.previewText,
-                     "advanceHangul": req.advanceHangul, "advanceOther": req.advanceOther, "advanceSpace": req.advanceSpace},
+                     "advanceHangul": req.advanceHangul, "advanceOther": req.advanceOther, "advanceSpace": req.advanceSpace,
+                     "oflBases": list(dict.fromkeys(req.oflBases))},
         }
     threading.Thread(target=_run, args=(bid,), daemon=True).start()
     return {"buildId": bid, "status": "queued"}
@@ -240,7 +259,7 @@ def cancel_build(bid: str, request: Request):
     return {"buildId": bid, "status": "cancelling"}
 
 
-MEDIA = {".ttf": "font/ttf", ".png": "image/png", ".pdf": "application/pdf", ".md": "text/markdown; charset=utf-8"}
+MEDIA = {".ttf": "font/ttf", ".png": "image/png", ".pdf": "application/pdf", ".md": "text/markdown; charset=utf-8", ".txt": "text/plain; charset=utf-8"}
 
 
 def artifact_file(aid):
@@ -275,6 +294,8 @@ def bundle(bid: str, request: Request):
                 z.write(p, f"{safe}/{a['name']}")
         z.writestr(f"{safe}/README.txt", "글꼴: " + b["familyName"] + f"\n글자 수: {b.get('glyphCount')}\n"
                    "- .ttf: 폰트 파일 (설치용)\n- specimen.pdf: 견본\n- glyph_sheet.png / sentence.png: 미리보기 그림\n"
-                   "- license_draft.md / product_draft.md: 초안 (공개 전 전문가 확인 필요)\n")
+                   "- license_draft.md / product_draft.md: 초안 (공개 전 전문가 확인 필요)\n"
+                   + ("- OFL.txt: 이 폰트의 라이선스 (OFL 도안 사용 — 폰트만 따로 판매 불가, 배포할 때 함께 넣기)\n"
+                      if any(a["name"] == "OFL.txt" for a in b["artifacts"]) else ""))
     return Response(buf.getvalue(), media_type="application/zip",
                     headers={"Content-Disposition": f'attachment; filename="{safe}_font.zip"'})

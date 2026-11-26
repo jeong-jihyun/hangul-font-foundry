@@ -1,7 +1,7 @@
 "use client";
 // 손글씨 화면: ① 종이 받기 ② 쓴 종이 사진 올리기 ③ 따낸 글씨 확인·고치기 ④ 2,350자 조합해 폰트 글자로
 import { useEffect, useMemo, useRef, useState } from "react";
-import { zipSync, strToU8 } from "fflate";
+import { zipSync, unzipSync, strToU8 } from "fflate";
 import { api } from "../lib/api";
 import { PageHead, Card, Button, Result, Notice, StatusChip } from "./ui";
 import { GlyphEditor } from "./GlyphEditor";
@@ -31,7 +31,17 @@ function Piece({ d, size = 44 }) {
     : <span className="hw-blank" style={{ width: size, height: size }} />;
 }
 
-export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip, customGlyphs = [] }) {
+// 연습용 기본 글꼴 도안 5종 (OFL 글꼴에서 만든 SVG). 이 도안을 쓴 폰트는 판매 불가·OFL 로만 배포
+export const TEMPLATES = [
+  { key: "gothic", label: "고딕체", from: "나눔고딕", mb: 2.1 },
+  { key: "myeongjo", label: "명조체", from: "바탕", mb: 2.9 },
+  { key: "gulim", label: "굴림체", from: "굴림", mb: 1.9 },
+  { key: "dotum", label: "돋움체", from: "돋움", mb: 1.2 },
+  { key: "gungsuh", label: "궁서체", from: "궁서", mb: 3.2 },
+];
+export const RESERVED = { gothic: ["Nanum", "NanumGothic", "나눔"] };
+
+export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip, customGlyphs = [], fontSettings = {}, saveFontSettings }) {
   const cs = useCharset(engine.status);
   const required = useMemo(() => (cs.items || []).map((i) => i.char), [cs.items]);
   const [layout, setLayout] = useState(layoutCache);
@@ -139,13 +149,47 @@ export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, hangul.length]);
 
+  // 기본 글꼴 도안 넣기: zip 받기 → 직접 고친 글자는 빼고 → 지금 폰트에 합치기 → 폰트에 OFL 표시
+  const [tplBusy, setTplBusy] = useState("");
+  const useTemplate = async (t) => {
+    if (!window.confirm(`'${t.label}' 도안 2,438자를 지금 폰트에 넣을까요?\n\n• 연습·무료 배포용입니다. 이 도안을 쓴 폰트는 마켓에서 팔 수 없고, OFL 라이선스로만 배포할 수 있어요.\n• 같은 글자는 도안으로 바뀝니다 (글자 탭에서 직접 고친 ${customGlyphs.length}자는 그대로).\n• 팔 폰트는 새 폰트를 만들어 기초 도안·손글씨로 시작하세요.`)) return;
+    setTplBusy(t.key);
+    try {
+      const res = await fetch(`/templates/${t.key}.zip`);
+      if (!res.ok) throw new Error("도안 파일을 받지 못했습니다. 잠시 뒤 다시 눌러 주세요.");
+      const keep = new Set(customGlyphs);
+      const all = unzipSync(new Uint8Array(await res.arrayBuffer()));
+      const files = Object.fromEntries(Object.entries(all).filter(([n]) => n.endsWith(".svg") && !keep.has(n)));
+      const zip = new File([zipSync(files, { level: 6 })], `${t.key}.zip`, { type: "application/zip" });
+      await saveFontSettings?.({ ...fontSettings, oflBases: [...new Set([...(fontSettings.oflBases || []), t.key])] });
+      await applyGlyphZip(zip, `${t.label} 도안 ${Object.keys(files).length}자`);
+      toast(`${t.label} 도안 ${Object.keys(files).length.toLocaleString()}자를 넣었어요. 글자 탭에서 확인하세요.`);
+    } catch (e) { toast(e.message || "넣지 못했습니다."); }
+    finally { setTplBusy(""); }
+  };
+
   const cur = sel && cellsOf(page).find((c) => c.key === sel);
 
   return (
     <section className="screen active" id="handwriting">
       <PageHead title="도안·손글씨" desc="자음·모음 조각 237개로 2,350자를 자동으로 맞춰 만듭니다. 조각은 기초 도안·손글씨 사진·편집기로 채웁니다." badge={`${doneAll}/${total}칸`} />
 
-      <Card title="기초 도안" aside={busy && applying ? <StatusChip status="running">{busy}</StatusChip> : null}>
+      <Card title="기본 글꼴 도안 5종 · 연습용" aside={<span className="badge">2,438자씩</span>}>
+        <p className="muted" style={{ marginTop: 0 }}>잘 만든 글꼴의 글자 2,438자(한글 2,350 + 영문·숫자·기호)를 바로 넣어 봅니다. <b>폰트 만들기 흐름을 익히고, 글자를 고치는 연습</b>에 좋아요.</p>
+        <div className="tpl-grid">
+          {TEMPLATES.map((t) => (
+            <button key={t.key} className="tpl-card" disabled={!!tplBusy || applying} onClick={() => useTemplate(t)} aria-label={`${t.label} 도안 넣기`}>
+              <img src={`/templates/${t.key}-preview.svg`} alt="" loading="lazy" />
+              <b>{t.label}</b>
+              <small>{tplBusy === t.key ? "넣는 중…" : `원본 ${t.from} · ${t.mb}MB`}</small>
+            </button>
+          ))}
+        </div>
+        <Notice>이 도안은 무료 공개 글꼴(OFL)에서 만들었습니다. 이 도안으로 만든 폰트는 <b>마켓에서 팔 수 없고</b>, 무료 배포·개인 사용만 됩니다. 만든 폰트 묶음에 OFL.txt 가 자동으로 들어갑니다.</Notice>
+        {(fontSettings.oflBases || []).length > 0 && <p className="muted" style={{ margin: "8px 0 0" }}>이 폰트는 OFL 도안({fontSettings.oflBases.map((k) => TEMPLATES.find((t) => t.key === k)?.label || k).join(", ")})을 썼습니다 — 판매 불가.</p>}
+      </Card>
+
+      <Card title="기초 도안 · 판매용 시작점" aside={busy && applying ? <StatusChip status="running">{busy}</StatusChip> : null}>
         <p className="muted" style={{ marginTop: 0 }}>앱이 만든 <b>보통 굵기 고딕 획</b>으로 조각을 채우고 2,350자를 바로 만듭니다. 그 위를 손글씨 사진이나 편집기로 고쳐 나가세요. 조각 하나를 고치면 그 조각이 들어간 글자가 모두 바뀝니다.</p>
         <div className="row-gap">
           <Button loading={applying} disabled={!hangul.length || engine.status !== "online"} onClick={() => fillBase(false)}>{doneAll ? "빈 조각만 기초 도안으로 채우기" : "기초 도안으로 2,350자 채우기"}</Button>

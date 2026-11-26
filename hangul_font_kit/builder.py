@@ -53,8 +53,13 @@ def build_ttf(found, cfg, out_path):
     fb.setupHorizontalHeader(ascent=cfg["ascent"], descent=cfg["descent"])
     fam, sty = cfg["family_name"], cfg["style_name"]
     ps = ps_name(fam)  # PostScript 이름은 영문·숫자만 허용 (한글 글꼴 이름도 빌드되게)
-    fb.setupNameTable({"familyName": fam, "styleName": sty, "uniqueFontIdentifier": f"{ps}-{sty}-{cfg['version']}",
-                       "fullName": f"{fam} {sty}", "psName": f"{ps}-{sty}", "version": f"Version {cfg['version']}"})
+    names = {"familyName": fam, "styleName": sty, "uniqueFontIdentifier": f"{ps}-{sty}-{cfg['version']}",
+             "fullName": f"{fam} {sty}", "psName": f"{ps}-{sty}", "version": f"Version {cfg['version']}"}
+    if cfg.get("copyright"):  # OFL 도안을 쓴 폰트: 저작권·라이선스 줄을 폰트 안에도 적는다
+        names["copyright"] = cfg["copyright"]
+    if cfg.get("license"):
+        names["licenseDescription"], names["licenseInfoURL"] = cfg["license"], cfg.get("license_url", "")
+    fb.setupNameTable(names)
     fb.setupOS2(sTypoAscender=cfg["ascent"], sTypoDescender=cfg["descent"], usWinAscent=cfg["ascent"],
                 usWinDescent=abs(cfg["descent"]))
     fb.setupPost()
