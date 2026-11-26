@@ -10,7 +10,7 @@ function sign(v) {
 }
 
 export function pinOk(pin) {
-  const want = process.env.APP_PIN || "";
+  const want = (process.env.APP_PIN || "").trim(); // 저장할 때 섞인 줄바꿈·빈칸 무시
   if (!want || typeof pin !== "string") return false;
   const a = Buffer.from(pin), b = Buffer.from(want);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
