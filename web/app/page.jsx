@@ -9,7 +9,7 @@ import { HomeScreen } from "../components/HomeScreen";
 import { ProjectBar } from "../components/ProjectBar";
 import {
   useSession, listProjects, createProject, updateProject, deleteProject,
-  saveProjectZip, loadProjectZip, mergedZip, countSvgs, slimCheck,
+  svgsFromZip, saveAllGlyphs, saveOneGlyph, loadProjectZip, localGet, localSet, slimCheck,
 } from "../lib/store";
 import { BuildScreen } from "../components/BuildScreen";
 import { SettingsScreen } from "../components/Screens";
@@ -38,7 +38,7 @@ export default function Page() {
   const setCheck = (c) => {
     setCheckState(c);
     try { localStorage.setItem("glyphroom-check", JSON.stringify(c)); } catch {}
-    if (uid && pidRef.current) updateProject(pidRef.current, { lastCheck: slimCheck(c) }).catch(() => {});
+    if (uid && pidRef.current) localSet(`glyphroom-font-${pidRef.current}-check`, slimCheck(c));
   };
   // 마지막 빌드: 어느 탭에 있어도 진행 상황을 계속 확인하고, 홈에서도 보이게 앱 전체에서 공유
   const [build, setBuildState] = useState(null);
@@ -46,8 +46,8 @@ export default function Page() {
     setBuildState(b);
     try { localStorage.setItem("glyphroom-build", JSON.stringify(b)); } catch {}
     if (uid && pidRef.current && b && ["succeeded", "failed", "cancelled"].includes(b.status)) {
-      const { log, ...rest } = b; // 기록은 빼고 요약만 저장
-      updateProject(pidRef.current, { lastBuild: rest }).catch(() => {});
+      const { log, ...rest } = b; // 기록은 빼고 요약만 이 기기에 저장
+      localSet(`glyphroom-font-${pidRef.current}-build`, rest);
     }
   };
   const buildActive = build && (build.status === "queued" || build.status === "running");
@@ -88,30 +88,34 @@ export default function Page() {
     setPid(id); pidRef.current = id;
     try { localStorage.setItem("glyphroom-project-" + uid, id); } catch {}
     zipMemory.file = null; zipMemory.glyphSetId = null; zipMemory.replacements = {}; zipMemory.removed = [];
-    zipMemory.loader = p.hasZip ? () => loadProjectZip(id, p.name) : null;
-    setCheckState(p.lastCheck || null);
-    setBuildState(p.lastBuild || null);
+    zipMemory.loader = p.glyphCount ? () => loadProjectZip(id, p.name) : null;
+    setCheckState(localGet(`glyphroom-font-${id}-check`));
+    setBuildState(localGet(`glyphroom-font-${id}-build`));
   };
 
-  // 지금 글자 묶음(원래 zip + 교체·빼기 반영)을 폰트에 저장. 저장 횟수를 아끼려고 zip 한 개로.
-  const persistZip = async (msg) => {
-    if (!uid || !pidRef.current || !zipMemory.file) return;
+  // 검수에 새 zip 을 썼으면 그 글자를 GitHub 폰트 폴더에 저장 (커밋)
+  const onZipChecked = async (file) => {
+    if (!uid || !pidRef.current) return;
     const id = pidRef.current;
     try {
-      setSaving("저장 중…");
-      const zip = await mergedZip(zipMemory.file, zipMemory.replacements, zipMemory.removed);
-      await saveProjectZip(id, zip, (pct) => setSaving(`저장 중 ${pct}%`));
-      const n = await countSvgs(zip);
-      await updateProject(id, { hasZip: true, glyphCount: n });
+      const items = await svgsFromZip(file);
+      setSaving(`GitHub에 저장 중 0/${items.length}`);
+      await saveAllGlyphs(id, items, (d, t) => setSaving(`GitHub에 저장 중 ${d}/${t}`));
       zipMemory.loader = () => loadProjectZip(id, current?.name);
       await refresh();
-      if (msg) toast(msg);
-    } catch { toast("글자를 저장하지 못했습니다. 잠시 뒤 다시 해 주세요."); }
+      toast(`글자 ${items.length}자를 '${current?.name || "폰트"}'에 저장했어요`);
+    } catch (e) { toast(e.message || "글자를 저장하지 못했습니다."); }
     finally { setSaving(""); }
   };
-  const onZipChecked = () => persistZip(`글자를 '${current?.name || "폰트"}'에 저장했어요`);
-  const onGlyphReplaced = () => persistZip();
-  const onFileRemoved = () => persistZip();
+  // 글자 1개를 고쳐 올리면 그 글자만 저장 (커밋 1개)
+  const onGlyphReplaced = async (name, file) => {
+    if (!uid || !pidRef.current) return;
+    try { setSaving("저장 중…"); await saveOneGlyph(pidRef.current, name, file); await refresh(); }
+    catch (e) { toast(e.message || "고친 글자를 저장하지 못했습니다."); }
+    finally { setSaving(""); }
+  };
+  // 이름이 틀린 파일은 처음부터 저장하지 않으므로, 빼기는 저장소에 할 일이 없음
+  const onFileRemoved = () => {};
 
   // 검수에 쓴 글자로 바로 만들기 (zip 을 다시 고를 필요 없음)
   const startBuild = async ({ familyName, allowMissing }) => {

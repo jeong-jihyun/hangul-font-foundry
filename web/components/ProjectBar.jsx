@@ -51,7 +51,7 @@ export function ProjectBar({ auth, projects, current, onSelect, onCreate, onRena
             {projects.length === 0 && <p className="muted" style={{ margin: 0 }}>아직 폰트가 없습니다. 아래에서 새로 만들어 주세요.</p>}
             {projects.map((p) => (
               <button key={p.id} className={"projitem" + (current?.id === p.id ? " active" : "")} onClick={() => { onSelect(p.id); setOpen(false); }}>
-                <span className="grow"><b>{p.name}</b><small>글자 {p.glyphCount || 0}자{p.lastBuild?.status === "succeeded" ? " · 폰트 만듦" : ""}</small></span>
+                <span className="grow"><b>{p.name}</b><small>저장된 글자 {p.glyphCount || 0}자</small></span>
                 {current?.id === p.id && <StatusChip status="success">지금</StatusChip>}
               </button>
             ))}
@@ -85,7 +85,7 @@ export function ProjectBar({ auth, projects, current, onSelect, onCreate, onRena
               <Button variant="light" onClick={async () => { await lock(); onUnlocked(); }}>잠그기</Button>
             </div>
           )}
-          <p className="muted" style={{ margin: "8px 0 0" }}>폰트 글자는 폰트마다 파일 한 개로 Vercel 보관함에 저장됩니다.</p>
+          <p className="muted" style={{ margin: "8px 0 0" }}>글자는 GitHub 비공개 저장소 hangul-font-glyphs 에 폰트별 폴더로 저장되고, 저장할 때마다 기록이 남습니다.</p>
         </div>
       )}
     </div>

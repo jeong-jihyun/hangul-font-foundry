@@ -3,7 +3,7 @@ import { pinOk, setSession, clearSession, isAuthed, json } from "../../../lib/se
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return json({ loggedIn: await isAuthed(), configured: !!(process.env.APP_PIN && process.env.SESSION_SECRET && process.env.BLOB_READ_WRITE_TOKEN) });
+  return json({ loggedIn: await isAuthed(), configured: !!(process.env.APP_PIN && process.env.SESSION_SECRET && process.env.GITHUB_TOKEN) });
 }
 
 export async function POST(req) {
