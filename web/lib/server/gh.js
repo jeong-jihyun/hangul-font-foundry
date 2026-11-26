@@ -7,7 +7,7 @@ import { unzipSync, zipSync, strToU8 } from "fflate";
 
 const REPO = process.env.GLYPH_REPO || "jeong-jihyun/hangul-font-glyphs";
 const BRANCH = "main";
-const API = `https://api.github.com/repos/${REPO}`;
+const API = `${process.env.GITHUB_API_BASE || "https://api.github.com"}/repos/${REPO}`; // 시험할 때만 바꿈
 
 async function gh(path, { method = "GET", body, raw = false } = {}) {
   const res = await fetch(API + path, {

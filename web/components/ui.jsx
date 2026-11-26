@@ -110,5 +110,5 @@ export function DemoBadge({ status = "offline", short = false }) {
   if (status === "online") return <span className="demo demo-online" role="status">● {short ? "ONLINE" : "ENGINE ONLINE"}</span>;
   if (status === "checking" || status === "waking")
     return <span className="demo demo-waking" role="status"><span className="dot-pulse" aria-hidden="true">●</span> {status === "waking" ? (short ? "깨우는 중" : "ENGINE 깨우는 중") : (short ? "확인 중" : "ENGINE 확인 중")}</span>;
-  return <span className="demo" role="status">● {short ? "OFFLINE" : "DEMO · ENGINE OFFLINE"}</span>;
+  return <span className="demo" role="status">● {short ? "OFFLINE" : "ENGINE OFFLINE"}</span>;
 }

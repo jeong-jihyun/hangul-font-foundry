@@ -14,17 +14,27 @@ export function ProjectBar({ auth, projects, current, onSelect, onCreate, onRena
   if (auth.status === "loading") return <div className="projbar"><span className="muted">저장소 확인 중…</span></div>;
 
   if (auth.status === "out") {
+    if (!open) {
+      return (
+        <button className="projbar out slim" onClick={() => setOpen(true)} aria-expanded="false">
+          <span aria-hidden="true">🔒</span>
+          <span className="grow"><b>폰트 저장 잠김</b><small>열면 만든 폰트를 GitHub에 저장하고 이어서 작업해요</small></span>
+          <span className="linkish">열기</span>
+        </button>
+      );
+    }
     return (
       <div className="projbar out">
-        <div className="grow"><b>비밀번호를 넣으면 폰트가 저장돼요</b><small>폰트 여러 개 · 폰·PC 어디서나 이어서 작업</small></div>
+        <div className="grow"><b>비밀번호(PIN) 넣기</b><small>숫자 6자리</small></div>
+        <button type="button" className="xbtn" aria-label="닫기" onClick={() => { setOpen(false); setName(""); }}>✕</button>
         <form className="pinform" onSubmit={async (e) => {
           e.preventDefault();
           setBusy(true);
-          try { await unlock(name); setName(""); onUnlocked(); toast("들어왔어요"); }
+          try { await unlock(name.trim()); setName(""); setOpen(false); onUnlocked(); toast("들어왔어요"); }
           catch (err) { toast(err.message); }
           finally { setBusy(false); }
         }}>
-          <input type="password" inputMode="numeric" autoComplete="current-password" placeholder="비밀번호(PIN)" aria-label="비밀번호(PIN)" value={name} onChange={(e) => setName(e.target.value)} maxLength={12} />
+          <input type="password" inputMode="numeric" autoComplete="current-password" placeholder="비밀번호(PIN)" aria-label="비밀번호(PIN)" value={name} onChange={(e) => setName(e.target.value)} maxLength={12} autoFocus />
           <Button type="submit" loading={busy}>열기</Button>
         </form>
       </div>

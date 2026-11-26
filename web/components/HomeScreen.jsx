@@ -42,7 +42,7 @@ export function HomeScreen({ go, check, build, engine }) {
 
       <div className="hero">
         <div className="hero-copy">
-          <div className="eyebrow">다음 할 일 · {next.step}단계</div>
+          <div className="eyebrow">다음 할 일 · 작업 순서 {next.step}번</div>
           <h2>{next.title}</h2>
           <p>{next.desc}</p>
           <Button onClick={() => go(next.to)}>{next.btn}&nbsp; ↗</Button>
@@ -65,7 +65,7 @@ export function HomeScreen({ go, check, build, engine }) {
         </div>
       </div>
 
-      <div className="section-title"><h2>작업 순서</h2><span>지금 {next.step}단계</span></div>
+      <div className="section-title"><h2>작업 순서</h2><span>지금 {next.step}번째</span></div>
       <div className="panel">
         <ol className="flow">
           {steps.map((x) => (

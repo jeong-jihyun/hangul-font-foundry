@@ -53,7 +53,7 @@ function EngineCard({ engine }) {
           <p className="muted" style={{ margin: "10px 0 0" }}>
             {Object.entries(libs).map(([k, v]) => `${k} ${v || "없음"}`).join(" · ")}
           </p>
-          <Notice>서버는 연결됐지만 글자 목록·검수·빌드는 아직 데모 결과입니다. 4~7단계에서 하나씩 실제 엔진으로 바뀝니다.</Notice>
+          <p className="muted" style={{ margin: "10px 0 0" }}>글자 목록·검수·폰트 만들기는 모두 이 엔진이 실제로 처리합니다.</p>
         </>
       )}
       {status === "waking" && (
@@ -61,7 +61,7 @@ function EngineCard({ engine }) {
       )}
       {status === "checking" && <p className="muted">서버 상태를 확인하고 있습니다…</p>}
       {status === "offline" && (
-        <Result show tone="error"><strong>✕ 엔진에 연결하지 못했습니다.</strong>{error} 잠시 뒤 다시 확인해 주세요. 지금 보이는 결과는 모두 데모입니다.</Result>
+        <Result show tone="error"><strong>✕ 엔진에 연결하지 못했습니다.</strong>{error} 잠시 뒤 다시 확인해 주세요. 연결되기 전에는 검수·폰트 만들기를 할 수 없습니다.</Result>
       )}
       <div className="row-between" style={{ marginTop: 14 }}>
         <span className="muted mono ellipsis" title={API_BASE}>{API_BASE.replace("https://", "")}</span>
