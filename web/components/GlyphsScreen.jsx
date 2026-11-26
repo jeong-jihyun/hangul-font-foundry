@@ -162,7 +162,7 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplac
 
   return (
     <section className="screen active" id="glyphs">
-      <PageHead eyebrow="GLYPH LIBRARY" title="글리프 라이브러리" desc="제작할 글자를 찾고 준비 상태를 관리합니다." badge="KS X 1001 · 2,350자" />
+      <PageHead title="글자 목록" desc="만들 글자 2,438자를 찾아보고, 글자를 눌러 그리거나 고칩니다." badge="KS X 1001 · 2,350자" />
 
       <Card title="문자 세트" aside={live ? <StatusChip status="success">엔진 생성</StatusChip> : <StatusChip status={cs.status === "loading" ? "running" : "warning"}>{cs.status === "loading" ? "불러오는 중" : "엔진 연결 필요"}</StatusChip>}>
         {live ? (

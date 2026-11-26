@@ -42,7 +42,7 @@ with sync_playwright() as p:
     check("GitHub 폴더 생성", any("새 폰트: 시험체" in m for m in gh()["msgs"]))
     # 홈 → '가' 그리기
     pg.goto(BASE + "/#home"); pg.wait_for_timeout(1500)
-    pg.locator(".hero .btn").first.click(); pg.wait_for_timeout(4000)
+    pg.locator(".hero .btn", has_text="앱에서 직접 그리기").click(); pg.wait_for_timeout(4000)
     check("홈에서 바로 편집기", pg.locator(".editor").count() == 1 and "가" in pg.locator(".ed-title").inner_text())
     pg.locator(".ed-tools button", has_text="사각형").click(); drag(pg, (150, 200), (300, 780))
     pg.locator(".ed-tools button", has_text="원").click(); drag(pg, (450, 250), (850, 650)); drag(pg, (570, 370), (730, 530))

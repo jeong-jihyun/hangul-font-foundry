@@ -25,7 +25,7 @@ export function PageHead({ eyebrow, title, desc, badge }) {
   return (
     <div className="pagehead">
       <div>
-        <div className="eyebrow">{eyebrow}</div>
+        {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         <h1>{title}</h1>
         <p>{desc}</p>
       </div>
@@ -107,8 +107,20 @@ export function IssueRow({ severity = "error", file, message, suggestion }) {
 
 // 엔진 상태 배지: 항상 보이게 두고, 연결 전에는 데모임을 분명히 알린다.
 export function DemoBadge({ status = "offline", short = false }) {
-  if (status === "online") return <span className="demo demo-online" role="status">● {short ? "ONLINE" : "ENGINE ONLINE"}</span>;
+  if (status === "online") return short ? <span className="demo demo-online" role="status">● 연결됨</span> : null;
   if (status === "checking" || status === "waking")
-    return <span className="demo demo-waking" role="status"><span className="dot-pulse" aria-hidden="true">●</span> {status === "waking" ? (short ? "깨우는 중" : "ENGINE 깨우는 중") : (short ? "확인 중" : "ENGINE 확인 중")}</span>;
+    return <span className="demo demo-waking" role="status"><span className="dot-pulse" aria-hidden="true">●</span> {status === "waking" ? (short ? "깨우는 중" : "엔진 깨우는 중") : (short ? "확인 중" : "엔진 확인 중")}</span>;
   return <span className="demo" role="status">● {short ? "OFFLINE" : "ENGINE OFFLINE"}</span>;
+}
+
+// 로고: 먹색 글자 칸 + ㄱ 획 + 펜촉, 주황 바닥선 (앱 아이콘 app/icon.svg 와 같은 모양)
+export function Logo({ size = 36 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" aria-hidden="true" className="logo">
+      <rect x="1" y="1" width="38" height="38" rx="10" fill="#20221f" />
+      <line x1="7" y1="29" x2="33" y2="29" stroke="#d85d3f" strokeWidth="2" />
+      <path d="M11 11 H25 V25" fill="none" stroke="#fffefa" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M25 25 L29 32 L21 32 Z" fill="#d85d3f" />
+    </svg>
+  );
 }

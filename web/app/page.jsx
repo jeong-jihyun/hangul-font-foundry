@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TABS, SETTINGS_KEY, DEFAULT_SETTINGS } from "../components/data";
-import { DemoBadge } from "../components/ui";
+import { DemoBadge, Logo } from "../components/ui";
 import { useEngine, api } from "../lib/api";
 import { GlyphsScreen } from "../components/GlyphsScreen";
 import { CheckScreen, zipMemory, ensureGlyphSet, mergeWithExisting } from "../components/CheckScreen";
@@ -25,7 +25,7 @@ export default function Page() {
   const timer = useRef();
   const pidRef = useRef(null);
   const engine = useEngine();
-  // 마지막 검수 결과: 글리프 탭의 완료/누락 표시에 쓰고, 새로고침해도 남도록 브라우저에 저장
+  // 마지막 검수 결과: 글자 탭의 완료/누락 표시에 쓰고, 새로고침해도 남도록 브라우저에 저장
   const [check, setCheckState] = useState(null);
   // ---- 비밀번호(PIN) 잠금 + 폰트 프로젝트 (GitHub 비공개 저장소) ----
   const auth = useSession();
@@ -194,7 +194,7 @@ export default function Page() {
     setCheck({ ...r, fileName: label, checkedAt: new Date().toISOString() });
     if (uid && pidRef.current) await onZipChecked(file, {});
   };
-  // 홈 등에서 '그리기' → 글리프 탭으로 가서 그 글자(또는 다음 빈 글자)를 편집기로 연다
+  // 홈 등에서 '그리기' → 글자 탭으로 가서 그 글자(또는 다음 빈 글자)를 편집기로 연다
   const openEditor = (target) => {
     try { sessionStorage.setItem("glyphroom-open-editor", target); } catch {}
     go("glyphs");
@@ -227,14 +227,13 @@ export default function Page() {
   return (
     <div className="shell">
       <header className="topbar">
-        <div className="brand"><div className="brandmark">ㄱ</div>glyphroom <span style={{ fontWeight: 450, color: "#96968d" }}>/ studio</span></div>
-        <div className="topright"><button className="badge-btn" onClick={() => go("settings")} aria-label="엔진 연결 상태 보기"><DemoBadge status={engine.status} /></button><div className="avatar" aria-hidden="true">GF</div></div>
+        <button className="brand" onClick={() => go("home")} aria-label="글리프룸 홈"><Logo /><span className="brand-text"><b>글리프룸</b><small>손글씨 한글 폰트</small></span></button>
+        <div className="topright">{engine.status !== "online" && <button className="badge-btn" onClick={() => go("settings")} aria-label="엔진 연결 상태 보기"><DemoBadge status={engine.status} /></button>}</div>
       </header>
       <div className="layout">
         <aside className="sidebar">
-          <div className="workspace-label">WORKSPACE</div>
           <nav className="nav" aria-label="주요 메뉴">{navButtons(false)}</nav>
-          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · v1.0<br />Made for type creators.</div>
+          <div className="side-bottom">글리프룸 v1.0</div>
         </aside>
         <main className="main">
           <ProjectBar auth={auth} projects={projects} current={current} saving={saving} toast={toast}

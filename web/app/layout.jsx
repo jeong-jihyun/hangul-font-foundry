@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "Glyphroom — Hangul Font Studio",
-  description: "한글 폰트 제작 보조 도구 — 문자 세트, SVG 검수, 폰트 빌드",
+  title: "글리프룸 — 손글씨 한글 폰트",
+  description: "손글씨 종이 사진으로 한글 폰트 2,350자를 만드는 도구",
 };
 
 export const viewport = {

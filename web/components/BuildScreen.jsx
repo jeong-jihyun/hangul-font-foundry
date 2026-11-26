@@ -141,7 +141,7 @@ export function BuildScreen({ settings, engine, check, go, build, startBuild, ca
 
   return (
     <section className="screen active" id="build">
-      <PageHead eyebrow="FONT EXPORT" title="폰트 만들기" desc="검수한 글자로 TTF 폰트와 견본을 만듭니다." badge="엔진 · build" />
+      <PageHead title="폰트 만들기" desc="검수한 글자로 TTF 폰트와 견본을 만듭니다." />
 
       {/* 1) 결과가 있으면 맨 위: 받기 + 써 보기 */}
       {ok && ttf && (
@@ -157,10 +157,10 @@ export function BuildScreen({ settings, engine, check, go, build, startBuild, ca
       {build && !ok && <Progress build={build} secs={secs} onCancel={cancelBuild} go={go} />}
 
       {/* 2) 만들기 */}
-      <Card title={ok ? "다시 만들기" : "만들기"} aside={<span className="badge">CONFIG</span>}>
+      <Card title={ok ? "다시 만들기" : "만들기"}>
         {!s ? (
           <>
-            <Result show tone="warning"><strong>△ 먼저 글자를 그리거나 올려 주세요.</strong>글리프 탭에서 글자를 그려 저장하면 자동으로 검수되고, 여기서 바로 만들 수 있습니다. 이미 저장한 글자가 있으면 검수 탭에서 '검수 실행'을 한 번 눌러 주세요.</Result>
+            <Result show tone="warning"><strong>△ 먼저 글자를 그리거나 올려 주세요.</strong>글자 탭에서 글자를 그려 저장하면 자동으로 검수되고, 여기서 바로 만들 수 있습니다. 이미 저장한 글자가 있으면 검수 탭에서 '검수 실행'을 한 번 눌러 주세요.</Result>
             <div className="row-gap">
               <Button onClick={() => openEditor ? openEditor("next") : go("glyphs")}>글자 그리러 가기 →</Button>
               <Button variant="light" onClick={() => go("check")}>검수 탭 (zip·저장된 글자)</Button>

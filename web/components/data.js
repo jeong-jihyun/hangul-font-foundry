@@ -1,11 +1,11 @@
 // 화면 목록 (데스크톱 좌측 메뉴 · 모바일 하단 탭 공용)
 export const TABS = [
-  { id: "home", ico: "⌂", label: "Overview", short: "홈" },
-  { id: "handwriting", ico: "✍", label: "Handwriting", short: "손글씨" },
-  { id: "glyphs", ico: "▦", label: "Glyph library", short: "글리프" },
-  { id: "check", ico: "✓", label: "Quality check", short: "검수" },
-  { id: "build", ico: "↗", label: "Font export", short: "빌드" },
-  { id: "settings", ico: "⚙", label: "Settings", short: "설정" },
+  { id: "home", ico: "⌂", label: "홈", short: "홈" },
+  { id: "handwriting", ico: "✎", label: "손글씨로 만들기", short: "손글씨" },
+  { id: "glyphs", ico: "▦", label: "글자 목록", short: "글자" },
+  { id: "check", ico: "✓", label: "검수", short: "검수" },
+  { id: "build", ico: "↗", label: "폰트 만들기", short: "빌드" },
+  { id: "settings", ico: "⚙", label: "설정", short: "설정" },
 ];
 
 // 1단계는 시안과 같은 샘플 12자 (4단계에서 실제 2,350자 목록으로 교체)

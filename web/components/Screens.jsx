@@ -22,8 +22,8 @@ export function SettingsScreen({ toast, settings, saveSettings, engine }) {
   };
   return (
     <section className="screen active" id="settings">
-      <PageHead eyebrow="PROJECT SETTINGS" title="프로젝트 설정" desc="폰트 메타데이터와 미리보기 기본값을 관리합니다." badge="font.json" />
-      <Card title="기본 정보" aside="FONT PROFILE">
+      <PageHead title="설정" desc="미리보기 문장 등 기본값과 엔진 연결 상태를 봅니다." />
+      <Card title="기본 정보">
         <Field id="settingName" label="글꼴 패밀리 이름" error={errors.name}><input id="settingName" value={form.name} onChange={set("name")} /></Field>
         <Field id="spacing" label="자간" error={errors.spacing}><input id="spacing" type="number" step="0.1" inputMode="decimal" value={form.spacing} onChange={set("spacing")} /></Field>
         <Field id="previewText" label="미리보기 문장" error={errors.preview}><textarea id="previewText" value={form.preview} onChange={set("preview")} /></Field>

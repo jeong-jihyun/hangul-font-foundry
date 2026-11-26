@@ -118,9 +118,9 @@ export function GuideCard({ open = false }) {
       <details className="guide" open={open}>
         <summary>펼쳐서 보기</summary>
         <ol className="guide-steps">
-          <li><b>앱에서 바로 그리기 (추천)</b><span>글리프 탭 → 글자 누르기 → <b>✎ 이 글자 그리기</b> → 펜·사각형·원으로 그리고 <b>저장</b>. 저장하면 자동으로 검수되고 GitHub에 남습니다. 손글씨 사진을 '밑그림'으로 깔고 따라 그릴 수 있습니다.</span></li>
+          <li><b>앱에서 바로 그리기 (추천)</b><span>글자 탭 → 글자 누르기 → <b>✎ 이 글자 그리기</b> → 펜·사각형·원으로 그리고 <b>저장</b>. 저장하면 자동으로 검수되고 GitHub에 남습니다. 손글씨 사진을 '밑그림'으로 깔고 따라 그릴 수 있습니다.</span></li>
           <li><b>다른 프로그램에서 그리기</b><span>일러스트레이터·Inkscape·Figma 등에서 <b>속이 채워진 도형</b>으로 그립니다. 선(stroke)으로 그렸다면 '윤곽선으로 변환'만 해 주세요. 그룹·변형·원·상대좌표·크기 차이는 올릴 때 <b>자동 정리</b>됩니다.</span></li>
-          <li><b>이름 붙여 zip으로</b><span>파일 이름은 글자 번호: 가 → <code>U+AC00.svg</code> (글리프 탭의 "글자 목록 CSV"에 2,438자 이름이 있음). 한 폴더에 모아 zip으로 압축해 위에 올립니다. 한두 글자는 글리프 탭의 'SVG 파일 올리기'로 바로 넣어도 됩니다.</span></li>
+          <li><b>이름 붙여 zip으로</b><span>파일 이름은 글자 번호: 가 → <code>U+AC00.svg</code> (글자 탭의 "글자 목록 CSV"에 2,438자 이름이 있음). 한 폴더에 모아 zip으로 압축해 위에 올립니다. 한두 글자는 글자 탭의 'SVG 파일 올리기'로 바로 넣어도 됩니다.</span></li>
           <li><b>고치기</b><span>검수에서 문제가 나온 글자는 '편집기에서 이 글자 고치기'를 누르면 바로 열립니다.</span></li>
         </ol>
         <p className="muted">다른 폰트의 글자 모양을 따라 그리거나 변환하면 안 됩니다. 글자 디자인의 아름다움은 이 도구가 판단할 수 없습니다.</p>
@@ -204,9 +204,9 @@ export function CheckScreen({ toast, engine, check, setCheck, go, onZipChecked, 
 
   return (
     <section className="screen active" id="check">
-      <PageHead eyebrow="QUALITY CONTROL" title="SVG 규격 검수" desc="앱에서 그린 글자는 저장할 때 자동으로 검수됩니다. 다른 프로그램에서 만든 글자는 zip으로 올리세요." badge="엔진 · check" />
+      <PageHead title="검수" desc="앱에서 그린 글자는 저장할 때 자동으로 검수됩니다. 다른 프로그램에서 만든 글자는 zip으로 올리세요." />
 
-      <Card title="글리프 zip 올리기" aside={<span className="badge">INPUT</span>}>
+      <Card title="글리프 zip 올리기">
         <input ref={inputRef} type="file" accept=".zip,application/zip" onChange={pick} hidden id="zipInput" />
         <button className={"dropzone" + (file ? " has-file" : "")} onClick={() => inputRef.current?.click()} disabled={busy}>
           {file ? (<><b>🗜 {file.name}</b><small>{fmtSize(file.size)} · 눌러서 다른 파일 고르기</small></>)
@@ -251,7 +251,7 @@ export function CheckScreen({ toast, engine, check, setCheck, go, onZipChecked, 
           <p className="muted" style={{ margin: "6px 0 0" }}>필수 {s.required.toLocaleString()}자 중 <b>{s.passed.toLocaleString()}자 준비</b> ({pct}%) · 남은 글자 {s.missing.toLocaleString()}자</p>
           {s.errors === 0 && s.missing === 0 && <Result show><strong>✓ 검수가 완료됐어요. 오류 0건을 확인했습니다.</strong>빌드 탭에서 폰트를 만들 수 있습니다.</Result>}
           {s.errors === 0 && s.missing > 0 && <Result show tone="warning"><strong>△ 올린 파일에는 오류가 없습니다.</strong>아직 그리지 않은 필수 글자가 {s.missing.toLocaleString()}자 있어 정식 빌드는 멈춥니다. 시험용 빌드(누락 허용)는 가능합니다.</Result>}
-          <button className="linkbtn" onClick={() => go("glyphs")}>글리프 탭에서 완료·누락 글자 보기 →</button>
+          <button className="linkbtn" onClick={() => go("glyphs")}>글자 탭에서 완료·누락 글자 보기 →</button>
         </Card>
       )}
 

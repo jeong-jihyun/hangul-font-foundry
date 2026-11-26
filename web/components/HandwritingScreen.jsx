@@ -119,7 +119,7 @@ export function HandwritingScreen({ engine, toast, go, projectId, applyGlyphZip 
 
   return (
     <section className="screen active" id="handwriting">
-      <PageHead eyebrow="HANDWRITING" title="손글씨로 만들기" desc="종이에 자음·모음을 쓰고 사진을 올리면, 2,350자를 자동으로 맞춰 만듭니다." badge={`${doneAll}/${total}칸`} />
+      <PageHead title="손글씨로 만들기" desc="종이에 자음·모음을 쓰고 사진을 올리면, 2,350자를 자동으로 맞춰 만듭니다." badge={`${doneAll}/${total}칸`} />
 
       <Card title="1. 종이 받아 쓰기" aside={<span className="badge">A4 · 6장</span>}>
         <p className="muted" style={{ marginTop: 0 }}>인쇄해서 <b>검은 펜</b>으로 진한 점선 칸에만 쓰세요. 파란 글자·선은 사진에서 지워집니다. <b>1장만 써도 192자</b>(가·개·거·기·나…), 3장이면 1,309자, 6장이면 2,350자를 만들 수 있어요.</p>

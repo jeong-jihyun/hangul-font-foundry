@@ -35,7 +35,6 @@ export function HomeScreen({ go, check, build, engine, openEditor, saved = 0, fo
     <section className="screen active" id="home">
       <div className="welcome">
         <div>
-          <div className="eyebrow">YOUR TYPE WORKSPACE</div>
           <h1>좋은 글자는<br />좋은 흐름에서 시작돼요.</h1>
           <p>글자를 그리고, 검수하고, 나만의 폰트로 완성하세요.</p>
         </div>
@@ -83,7 +82,7 @@ export function HomeScreen({ go, check, build, engine, openEditor, saved = 0, fo
         </ol>
       </div>
 
-      <div className="section-title"><h2>최근 작업</h2><span>RECENT</span></div>
+      <div className="section-title"><h2>최근 작업</h2></div>
       <div className="panel">
         {!check && !build && <p className="muted" style={{ margin: 0 }}>아직 작업이 없습니다. 위의 "다음 할 일"부터 시작해 보세요.</p>}
         {build && (
