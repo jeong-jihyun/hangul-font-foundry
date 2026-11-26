@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="./svgedit.css" rel="stylesheet" media="all">
+  <title>SVG-Edit · Glyphroom</title>
+  <!-- SVG-Edit 7.4.2 (라이선스: LICENSE-MIT.txt 등). Glyphroom 글자 편집용 설정: 1000×1000, 브라우저 저장 기능 끔 -->
+</head>
+<body style="margin:0">
+  <div id="container" style="width:100%;height:100vh"></div>
+  <script type="module">
+    import Editor from './Editor.js'
+    const svgEditor = new Editor(document.getElementById('container'))
+    svgEditor.setConfig({
+      dimensions: [1000, 1000],
+      noStorageOnLoad: true,
+      forceStorage: false,
+      noDefaultExtensions: true,
+      extensions: ['ext-grid', 'ext-panning', 'ext-polystar'],
+      showRulers: true
+    })
+    svgEditor.init()
+    window.svgEditor = svgEditor
+    const wait = setInterval(() => {
+      if (svgEditor.svgCanvas) { clearInterval(wait); window.glyphroomReady = true }
+    }, 200)
+  </script>
+</body>
+</html>

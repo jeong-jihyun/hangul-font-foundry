@@ -49,9 +49,9 @@ export function Card({ title, aside, children, className = "" }) {
 }
 
 // 주요 버튼: 실행 중에는 눌러도 다시 실행되지 않게 막는다(중복 요청 방지).
-export function Button({ children, onClick, loading = false, variant = "", disabled = false, type = "button" }) {
+export function Button({ children, onClick, loading = false, variant = "", disabled = false, type = "button", className = "" }) {
   return (
-    <button type={type} className={"btn " + variant} onClick={onClick} disabled={disabled || loading} aria-busy={loading || undefined}>
+    <button type={type} className={"btn " + variant + (className ? " " + className : "")} onClick={onClick} disabled={disabled || loading} aria-busy={loading || undefined}>
       {loading && <span className="spinner" aria-hidden="true" />}
       {children}
     </button>

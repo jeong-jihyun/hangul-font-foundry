@@ -114,6 +114,18 @@ export default function Page() {
     catch (e) { toast(e.message || "고친 글자를 저장하지 못했습니다."); }
     finally { setSaving(""); }
   };
+  // 편집기에서 그린 글자 저장 (GitHub). 잠겨 있으면 false, 실패하면 오류를 던져 편집기가 알려 줌
+  const saveToStore = async (name, file) => {
+    if (!uid || !pidRef.current) return false;
+    setSaving("GitHub에 저장 중…");
+    try {
+      await saveOneGlyph(pidRef.current, name, file);
+      if (!zipMemory.file && !zipMemory.loader) { const id = pidRef.current; zipMemory.loader = () => loadProjectZip(id, current?.name); }
+      refresh().catch(() => {});
+      return true;
+    } catch (e) { throw new Error("GitHub에 저장하지 못했습니다: " + e.message); }
+    finally { setSaving(""); }
+  };
   // 이름이 틀린 파일은 처음부터 저장하지 않으므로, 빼기는 저장소에 할 일이 없음
   const onFileRemoved = () => {};
 
@@ -200,7 +212,7 @@ export default function Page() {
         <aside className="sidebar">
           <div className="workspace-label">WORKSPACE</div>
           <nav className="nav" aria-label="주요 메뉴">{navButtons(false)}</nav>
-          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 8<br />Made for type creators.</div>
+          <div className="side-bottom">HANGUL FONT KIT<br />Glyphroom web · step 9<br />Made for type creators.</div>
         </aside>
         <main className="main">
           <ProjectBar auth={auth} projects={projects} current={current} saving={saving} toast={toast}
@@ -210,7 +222,7 @@ export default function Page() {
             onRename={async (id, name) => { await updateProject(id, { name }); await refresh(); }}
             onDelete={async (id) => { await deleteProject(id); let l = await refresh(); if (!l.length) { await createProject("나의 첫 폰트"); l = await refresh(); } openProject(l[0].id, l); }} />
           {tab === "home" && <HomeScreen go={go} check={check} build={build} engine={engine} />}
-          {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onGlyphReplaced={onGlyphReplaced} />}
+          {tab === "glyphs" && <GlyphsScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onGlyphReplaced={onGlyphReplaced} saveToStore={saveToStore} loggedIn={!!uid} />}
           {tab === "check" && <CheckScreen toast={toast} engine={engine} check={check} setCheck={setCheck} go={go} onZipChecked={onZipChecked} onFileRemoved={onFileRemoved} />}
           {tab === "build" && ready && <BuildScreen settings={settings} engine={engine} check={check} go={go} build={build} startBuild={startBuild} cancelBuild={cancelBuild} />}
           {tab === "settings" && ready && <SettingsScreen toast={toast} settings={settings} saveSettings={saveSettings} engine={engine} />}

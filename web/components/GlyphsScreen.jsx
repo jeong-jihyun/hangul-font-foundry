@@ -1,10 +1,27 @@
 "use client";
-// 글리프 화면 (4단계): 서버가 만든 실제 필수 글자 목록을 보여 준다.
+// 글리프 화면: 실제 필수 글자 목록 + 글자를 눌러 앱 안에서 바로 그리기(9단계 편집기)
 import { useEffect, useMemo, useRef, useState } from "react";
 import { API_BASE, api } from "../lib/api";
 import { SAMPLE_GLYPHS } from "./data";
 import { PageHead, Card, Button, Result, StatusChip } from "./ui";
 import { replaceGlyph, zipMemory, hasGlyphSource } from "./CheckScreen";
+import { GlyphEditor } from "./GlyphEditor";
+import { SvgEditModal } from "./SvgEditModal";
+import { unzipSync, zipSync, strFromU8, strToU8 } from "fflate";
+
+// 편집기에 넣을 지금 글자: 고친 것 → 이 기기의 zip → 저장소(GitHub)에서 받은 zip → 없으면 빈 글자
+async function currentSvg(name) {
+  const rep = zipMemory.replacements[name];
+  if (rep) return rep.text();
+  if (!zipMemory.file && zipMemory.loader) {
+    const f = await zipMemory.loader();
+    if (f) { zipMemory.file = f; zipMemory.glyphSetId = null; zipMemory.replacements = {}; zipMemory.removed = []; }
+  }
+  if (!zipMemory.file) return null;
+  const files = unzipSync(new Uint8Array(await zipMemory.file.arrayBuffer()), { filter: (f) => f.name.split("/").pop() === name && !f.name.includes("__MACOSX") });
+  const hit = Object.values(files)[0];
+  return hit ? strFromU8(hit) : null;
+}
 
 const PAGE = 60; // 한 번에 그리는 글자 수 (2,438자를 한꺼번에 그리면 폰이 느려짐)
 const GROUPS = [["all", "전체"], ["hangul", "한글"], ["latin", "숫자·영문"], ["symbol", "기호"]];
@@ -60,7 +77,9 @@ function MyGlyph({ check, g, ver, fallback }) {
     src={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/preview/${g.filename}?v=${ver}`} onError={() => setBad(true)} />;
 }
 
-export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplaced }) {
+export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplaced, saveToStore, loggedIn }) {
+  const [editing, setEditing] = useState(null);  // 편집기로 연 글자
+  const [svgEdit, setSvgEdit] = useState(null);  // SVG-Edit 창 {svg, apply}
   const cs = useCharset(engine.status);
   const live = cs.status === "ready";
   const items = useMemo(
@@ -104,6 +123,28 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplac
   useEffect(() => setShown(PAGE), [group, q, live, st]);
   useEffect(() => setSheet(false), [group, q, st]);
   const sel = selected || list[0] || items[0];
+
+  // 편집기에서 저장: ① GitHub(잠금 열림) ② 엔진에 올려 바로 다시 검수 → 글리프·빌드 탭에 반영
+  const saveFromEditor = async (name, svg) => {
+    const file = new File([svg], name, { type: "image/svg+xml" });
+    let stored = false;
+    if (saveToStore) stored = await saveToStore(name, file); // 실패하면 여기서 오류가 나 편집기에 알려 줌
+    if (!hasGlyphSource()) { // zip 없이 앱에서 처음 그리는 경우: 이 글자 하나로 묶음을 시작
+      zipMemory.file = new File([zipSync({ [name]: strToU8(svg) })], "앱에서 그린 글자.zip", { type: "application/zip" });
+      zipMemory.glyphSetId = null; zipMemory.replacements = {}; zipMemory.removed = [];
+    }
+    try {
+      const r = await replaceGlyph(name, file);
+      setCheck({ ...r, fileName: zipMemory.file?.name || "앱에서 그린 글자", checkedAt: new Date().toISOString() });
+      setVer((v) => v + 1);
+      const ch = String.fromCodePoint(parseInt(name.slice(2, -4), 16));
+      const ok = new Set(r.ready).has(ch);
+      toast(`${ch} 저장${stored ? " (GitHub)" : ""} · 검수 ${ok ? "통과" : "고칠 곳 있음"}`);
+    } catch (e) {
+      if (stored) toast(`GitHub에는 저장했지만 검수는 못 했어요: ${e.message}`);
+      else throw e;
+    }
+  };
   const counts = cs.counts;
 
   return (
@@ -148,7 +189,7 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplac
         )}
         {check ? (
           <div className="filters" role="group" aria-label="제작 상태" style={{ marginTop: 8 }}>
-            {[["mine", `내가 그린 글자 ${items.filter((i) => isMine(i.char)).length.toLocaleString()}`], ["missing", `아직 없음 ${items.filter((i) => !isMine(i.char)).length.toLocaleString()}`], ["all", "전체"]].map(([k, l]) => (
+            {[["mine", `내가 그린 글자 ${items.filter((i) => isMine(i.char)).length.toLocaleString()}`], ["missing", `아직 없음 ${items.filter((i) => !isMine(i.char)).length.toLocaleString()}`], ["all", "모두"]].map(([k, l]) => (
               <button key={k} className={"filter" + (st === k ? " active" : "")} aria-pressed={st === k} onClick={() => setSt(k)}>{l}</button>
             ))}
           </div>
@@ -203,12 +244,11 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplac
               if (!f) return;
               setBusy(true);
               try {
-                const r = await replaceGlyph(sel.filename, f);
-                onGlyphReplaced?.(sel.filename, f);
-                setCheck({ ...r, fileName: zipMemory.file?.name || check?.fileName, checkedAt: new Date().toISOString() });
-                setVer((v) => v + 1);
-                const st = new Set(r.ready).has(sel.char) ? "통과" : "고칠 곳 있음";
-                toast(`${sel.char} 교체 완료 · 다시 검수: ${st}`);
+                const { normalizeSvg } = await import("../lib/glyph/normalize");
+                const r = normalizeSvg(await f.text());
+                if (!r.svg) { toast(r.problems[0] || "불러올 모양이 없습니다."); return; }
+                await saveFromEditor(sel.filename, r.svg);
+                if (r.notes.length) setTimeout(() => toast(`자동 정리 ${r.notes.length}건: ${r.notes[0]}`), 2400);
               } catch (err) { toast(err.message); }
               finally { setBusy(false); }
             }} />
@@ -216,16 +256,15 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplac
               const mine = check && statusOf(sel.char) !== "missing" && check.glyphSetId;
               return (
                 <>
-                  <div className="action-grid">
+                  <Button className="fullwidth" onClick={() => { setEditing(sel); setSheet(false); }}>✎ {mine ? "이 글자 고치기" : "이 글자 그리기"}</Button>
+                  {!loggedIn && <p className="muted" style={{ margin: "6px 0 0" }}>위쪽 잠금을 열면 그린 글자가 GitHub에 저장됩니다. 잠긴 상태에서는 이 기기에서만 쓰입니다.</p>}
+                  <div className="action-grid" style={{ marginTop: 8 }}>
                     {mine
                       ? <a className="btn light" href={`${API_BASE}/api/v1/glyphsets/${check.glyphSetId}/files/${sel.filename}`} download={sel.filename}>⇩ 고치기용으로 받기</a>
                       : <a className="btn light" href={`${API_BASE}/api/v1/templates/${sel.codepoint}.svg`} download={sel.filename}>⇩ 빈 바탕 받기</a>}
-                    <Button loading={busy} onClick={() => {
-                      if (!hasGlyphSource()) { toast("먼저 검수 탭에서 글리프 zip을 골라 검수해 주세요."); return; }
-                      fileRef.current?.click();
-                    }}>⇧ {mine ? "고친 파일 올리기" : "그린 파일 올리기"}</Button>
+                    <Button variant="light" loading={busy} onClick={() => fileRef.current?.click()}>⇧ SVG 파일 올리기</Button>
                   </div>
-                  <p className="muted" style={{ margin: "8px 0 0" }}>{mine ? "받은 파일을 그리기 도구에서 고친 뒤 올리세요." : "빈 바탕에 그려 저장한 뒤 올리세요."} 파일 이름은 달라도 {sel.filename} 으로 저장하고 자동으로 다시 검수합니다.</p>
+                  <p className="muted" style={{ margin: "8px 0 0" }}>다른 프로그램을 쓰려면: 받아서 고친 뒤 올리세요. 파일 이름이 달라도 {sel.filename} 으로 저장되고, 모양은 자동으로 규칙에 맞게 정리됩니다.</p>
                   <details className="more">
                     <summary>더 보기</summary>
                     {mine && (
@@ -243,6 +282,15 @@ export function GlyphsScreen({ engine, toast, check, setCheck, go, onGlyphReplac
           </Card>
         )}
       </div>
+      {editing && (
+        <GlyphEditor glyph={editing} list={items} toast={toast}
+          loadSvg={currentSvg}
+          onSave={saveFromEditor}
+          onClose={() => { setSelected(editing); setEditing(null); }}
+          onNavigate={(g) => { setEditing(g); setSelected(g); }}
+          onOpenSvgEdit={(svg, apply) => setSvgEdit({ svg, apply })} />
+      )}
+      {svgEdit && <SvgEditModal svg={svgEdit.svg} onApply={svgEdit.apply} onClose={() => setSvgEdit(null)} toast={toast} />}
     </section>
   );
 }
